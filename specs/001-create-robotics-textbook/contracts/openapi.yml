@@ -1,0 +1,154 @@
+openapi: 3.0.0
+info:
+  title: AI-Native Textbook API
+  version: 1.0.0
+paths:
+  /chat:
+    post:
+      summary: Handle a user's chat query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                session_id:
+                  type: string
+      responses:
+        '200':
+          description: A successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+  /selected-chat:
+    post:
+      summary: Handle a user's chat query on selected text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                query:
+                  type: string
+                session_id:
+                  type: string
+      responses:
+        '200':
+          description: A successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+  /auth/signup:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '201':
+          description: User created
+  /auth/login:
+    post:
+      summary: Log in a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+  /chapters/{chapter_id}/personalize:
+    post:
+      summary: Personalize a chapter for the current user
+      parameters:
+        - name: chapter_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A personalized chapter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chapter'
+  /chapters/{chapter_id}/translate:
+    post:
+      summary: Translate a chapter to Urdu
+      parameters:
+        - name: chapter_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: An Urdu translation of the chapter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chapter'
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        software_background:
+          type: string
+          enum: [Beginner, Intermediate, Advanced]
+        hardware_experience:
+          type: string
+          enum: [None, Arduino/RPi, ROS, Robotics Kit]
+        preferred_learning:
+          type: string
+          enum: [Visual, Code-heavy, Theory, Hands-on]
+    Chapter:
+      type: object
+      properties:
+        chapter_id:
+          type: string
+        module_id:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        order:
+          type: integer

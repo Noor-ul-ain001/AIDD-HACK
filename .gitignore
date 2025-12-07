@@ -1,0 +1,26 @@
+# Gitignore for Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+*.egg-info/
+.env
+
+# Gitignore for Node.js
+node_modules/
+dist/
+build/
+*.log
+.env*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Universal ignores
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
