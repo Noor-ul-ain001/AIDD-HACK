@@ -15,15 +15,15 @@ const config: Config = {
   },
 
   // Set the production url of your site here
-  url: 'https://your-docusaurus-site.example.com',
+  url: 'https://Noor-ul-ain001.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/',
+  baseUrl: '/AIDD-HACK/',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'your-github-username', // Usually your GitHub org/user name.
-  projectName: 'hack-book', // Usually your repo name.
+  organizationName: 'Noor-ul-ain001', // Usually your GitHub org/user name.
+  projectName: 'AIDD-HACK', // Usually your repo name.
 
   onBrokenLinks: 'throw',
 
@@ -44,7 +44,7 @@ const config: Config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/your-github-username/hack-book/tree/main/frontend/',
+            'https://github.com/Noor-ul-ain001/AIDD-HACK/tree/main/frontend/',
         },
         blog: {
           showReadingTime: true,
@@ -55,7 +55,7 @@ const config: Config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/your-github-username/hack-book/tree/main/frontend/',
+            'https://github.com/Noor-ul-ain001/AIDD-HACK/tree/main/frontend/',
           // Useful options to enforce blogging best practices
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
@@ -90,7 +90,7 @@ const config: Config = {
         //{to: '/blog', label: 'Blog', position: 'left'},
         {to: '/docs/chatbot', label: 'Chatbot', position: 'left'}, // Add link to chatbot page
         {
-          href: 'https://github.com/your-github-username/hack-book',
+          href: 'https://github.com/Noor-ul-ain001/AIDD-HACK',
           label: 'GitHub',
           position: 'right',
         },
@@ -129,7 +129,7 @@ const config: Config = {
             },
             {
               label: 'Code Examples',
-              href: 'https://github.com/your-github-username/hack-book',
+              href: 'https://github.com/Noor-ul-ain001/AIDD-HACK',
             },
             {
               label: 'Practice Exercises',
@@ -150,7 +150,7 @@ const config: Config = {
             },
             {
               label: 'GitHub Discussions',
-              href: 'https://github.com/your-github-username/hack-book/discussions',
+              href: 'https://github.com/Noor-ul-ain001/AIDD-HACK/discussions',
             },
             {
               label: 'Stack Overflow',
