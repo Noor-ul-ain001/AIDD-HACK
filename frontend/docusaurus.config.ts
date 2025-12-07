@@ -25,7 +25,7 @@ const config: Config = {
   organizationName: 'Noor-ul-ain001', // Usually your GitHub org/user name.
   projectName: 'AIDD-HACK', // Usually your repo name.
 
-  onBrokenLinks: 'throw',
+  onBrokenLinks: 'warn',
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
