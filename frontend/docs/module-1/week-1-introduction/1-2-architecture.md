@@ -1,0 +1,99 @@
+---
+sidebar_position: 2
+difficulty: beginner
+---
+
+# 1.2: ROS 2 Architecture and Core Concepts
+
+## Overview
+
+This submodule delves into the architectural design of ROS 2, exploring its core concepts and communication mechanisms.
+
+## Learning Objectives
+
+By the end of this submodule, you will:
+- Understand the ROS 2 architecture based on DDS
+- Identify and explain the fundamental concepts (Nodes, Topics, Services, Actions)
+- Implement a basic ROS 2 node
+- Recognize the benefits of the DDS communication layer
+
+## ROS 2 Architecture Overview
+
+ROS 2 uses DDS (Data Distribution Service) as its underlying communication middleware. DDS is a standard communication middleware for real-time, distributed systems, providing:
+
+- **Publish/Subscribe**: Asynchronous message passing
+- **Request/Reply**: Synchronous request/response communication
+- **Content-based subscriptions**: Messages filtered by content
+- **Discovery**: Automatic detection of participants
+- **Quality of Service (QoS)**: Configurable communication policies
+
+### Core Concepts
+
+1. **Nodes**: Processes that perform computation. Nodes are the fundamental unit of computation in ROS 2.
+
+2. **Messages**: Data structures used for communication between nodes.
+
+3. **Topics**: Names to which messages are sent and received. Publishers send messages, subscribers receive messages.
+
+4. **Services**: Synchronous request/response communication pattern.
+
+5. **Actions**: Asynchronous goal-oriented communication pattern.
+
+```python
+# Example ROS 2 Node Structure
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+class MinimalPublisher(Node):
+    def __init__(self):
+        super().__init__('minimal_publisher')
+        self.publisher_ = self.create_publisher(String, 'topic', 10)
+        timer_period = 0.5  # seconds
+        self.timer = self.create_timer(timer_period, self.timer_callback)
+        self.i = 0
+
+    def timer_callback(self):
+        msg = String()
+        msg.data = 'Hello World: %d' % self.i
+        self.publisher_.publish(msg)
+        self.get_logger().info('Publishing: "%s"' % msg.data)
+        self.i += 1
+```
+
+## Quality of Service (QoS) Settings
+
+QoS policies allow developers to configure how messages are delivered:
+
+- **Reliability**: Best effort or reliable delivery
+- **Durability**: Volatile or transient local
+- **History**: Keep last N messages or keep all
+- **Depth**: Buffer size for messages
+
+## Launch Systems
+
+ROS 2 uses launch files to start multiple nodes simultaneously:
+
+```python
+# Python launch file example
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+def generate_launch_description():
+    return LaunchDescription([
+        Node(
+            package='demo_nodes_py',
+            executable='talker',
+            name='talker',
+        ),
+        Node(
+            package='demo_nodes_py',
+            executable='listener',
+            name='listener',
+        ),
+    ])
+```
+
+## Summary
+
+This submodule covered the architectural aspects of ROS 2, including its core concepts and the underlying DDS communication layer. The next submodule will explore installation and setup procedures for ROS 2.

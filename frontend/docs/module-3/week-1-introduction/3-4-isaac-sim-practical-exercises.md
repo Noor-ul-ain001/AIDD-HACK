@@ -1,0 +1,1663 @@
+---
+sidebar_position: 4
+difficulty: intermediate
+---
+
+# 3.4: Isaac Sim Practical Exercises
+
+## Overview
+
+This submodule provides hands-on exercises to apply the Isaac Sim concepts learned in the previous submodules. You'll create complete robotics simulation scenarios, implement robot control, work with sensors in Isaac Sim, and integrate everything with ROS 2.
+
+## Learning Objectives
+
+By the end of this submodule, you will:
+- Build a complete simulation environment with robots and sensors in Isaac Sim
+- Implement robot navigation and control in Isaac Sim
+- Work with Isaac Sim's advanced sensor models
+- Create custom Isaac Sim extensions
+- Integrate Isaac Sim with ROS 2 navigation stack
+- Debug common Isaac Sim issues and optimize performance
+
+## Exercise 1: Complete Robot Simulation Environment
+
+### Objective
+Create a complete simulation environment in Isaac Sim with a robot, environment, and basic ROS 2 integration.
+
+### Step 1: Create Workspace Structure
+
+First, let's create the necessary structure for our Isaac Sim exercises:
+
+```bash
+# Create a directory for Isaac Sim exercises
+mkdir -p ~/isaac_sim_exercises/{robots,worlds,scripts,config}
+cd ~/isaac_sim_exercises
+```
+
+### Step 2: Create Robot Configuration
+
+Create a Python script to set up our robot in Isaac Sim (`~/isaac_sim_exercises/scripts/setup_robot.py`):
+
+```python
+#!/usr/bin/env python3
+"""
+Complete robot setup script for Isaac Sim
+"""
+
+import sys
+import os
+
+# Add Isaac Sim Python paths
+isaac_sim_path = os.environ.get('ISAAC_SIM_PATH')
+if isaac_sim_path:
+    sys.path.insert(0, os.path.join(isaac_sim_path, 'python'))
+    sys.path.insert(0, os.path.join(isaac_sim_path, 'kit'))
+
+# Import Isaac Sim modules
+from omni.isaac.core import World
+from omni.isaac.core.robots import Robot
+from omni.isaac.core.utils.stage import add_reference_to_stage
+from omni.isaac.core.utils.nucleus import get_assets_root_path
+from omni.isaac.core.utils.prims import create_prim, get_prim_at_path
+from omni.isaac.core.utils.stage import get_stage_units
+from omni.isaac.core.materials import PreviewSurface
+from pxr import Gf, UsdGeom
+import numpy as np
+
+
+class IsaacSimExerciseRobot:
+    """Class to manage our exercise robot in Isaac Sim"""
+    
+    def __init__(self):
+        """Initialize the exercise robot"""
+        self.world = None
+        self.robot = None
+        self.robot_path = "/World/ExerciseRobot"
+        self.name = "exercise_robot"
+        
+    def setup_world(self):
+        """Set up the simulation world"""
+        print("Setting up the simulation world...")
+        
+        # Create the world with 1m units
+        self.world = World(stage_units_in_meters=1.0)
+        
+        # Add default ground plane
+        self.world.scene.add_default_ground_plane()
+        
+        print("✓ World setup complete")
+        
+    def add_environment_objects(self):
+        """Add environment objects to the scene"""
+        print("Adding environment objects...")
+        
+        # Add a table
+        create_prim(
+            prim_path="/World/Table",
+            prim_type="Cuboid",
+            position=[2, 0, 0.5],
+            scale=[1.5, 1, 0.05]
+        )
+        
+        # Add a box on the table
+        create_prim(
+            prim_path="/World/Table/Box",
+            prim_type="Cube",
+            position=[2, 0, 0.75],
+            scale=[0.3, 0.3, 0.3]
+        )
+        
+        # Add a wall
+        create_prim(
+            prim_path="/World/Wall",
+            prim_type="Cuboid",
+            position=[0, 3, 1],
+            scale=[5, 0.1, 2],
+            orientation=[0, 0, 0.707, 0.707]  # 90-degree rotation around Z
+        )
+        
+        # Create a simple room-like environment
+        create_prim(
+            prim_path="/World/Wall1",
+            prim_type="Cuboid",
+            position=[3, 0, 1],
+            scale=[0.1, 5, 2]
+        )
+        
+        print("✓ Environment objects added")
+    
+    def add_robot(self):
+        """Add the robot to the simulation"""
+        print("Adding robot to simulation...")
+        
+        try:
+            # Try to use a default robot asset
+            assets_root_path = get_assets_root_path()
+            if assets_root_path:
+                robot_usd_path = assets_root_path + "/Isaac/Robots/TurtleBot3Burger/turtlebot3_burger.usd"
+                
+                self.robot = self.world.scene.add(
+                    Robot(
+                        prim_path=self.robot_path,
+                        name=self.name,
+                        usd_path=robot_usd_path,
+                        position=[0, 0, 0.1],
+                        orientation=[0, 0, 0, 1]
+                    )
+                )
+                print(f"✓ Robot added from asset: {robot_usd_path}")
+            else:
+                print("✗ Could not find Isaac Sim assets, creating a basic robot")
+                # Fallback: Create a simple robot using basic prims
+                self.create_basic_robot()
+                
+        except Exception as e:
+            print(f"✗ Failed to add robot from asset: {e}")
+            # Fallback: Create a simple robot
+            self.create_basic_robot()
+    
+    def create_basic_robot(self):
+        """Create a basic robot if assets are not available"""
+        print("Creating basic robot...")
+        
+        # Create robot root
+        create_prim(
+            prim_path=self.robot_path,
+            prim_type="Xform",
+            position=[0, 0, 0.5]
+        )
+        
+        # Create robot base
+        create_prim(
+            prim_path=f"{self.robot_path}/Base",
+            prim_type="Cylinder",
+            position=[0, 0, 0],
+            scale=[0.2, 0.2, 0.2]
+        )
+        
+        # Create wheels
+        create_prim(
+            prim_path=f"{self.robot_path}/LeftWheel",
+            prim_type="Cylinder",
+            position=[0, 0.15, 0],
+            scale=[0.1, 0.1, 0.05]
+        )
+        
+        create_prim(
+            prim_path=f"{self.robot_path}/RightWheel",
+            prim_type="Cylinder",
+            position=[0, -0.15, 0],
+            scale=[0.1, 0.1, 0.05]
+        )
+        
+        print("✓ Basic robot created")
+    
+    def add_sensors(self):
+        """Add sensors to the robot"""
+        print("Adding sensors to the robot...")
+        
+        # Add a camera sensor
+        try:
+            from omni.isaac.sensor import Camera
+            
+            camera = Camera(
+                prim_path=f"{self.robot_path}/FrontCamera",
+                position=np.array([0.1, 0, 0.1]),  # Position relative to robot
+                frequency=30,
+                resolution=(640, 480)
+            )
+            camera.initialize()
+            
+            print("✓ Camera sensor added")
+        except Exception as e:
+            print(f"✗ Failed to add camera: {e}")
+        
+        # Add LiDAR sensor
+        try:
+            from omni.isaac.sensor import RotatingLidarPhysX
+            
+            lidar = RotatingLidarPhysX(
+                prim_path=f"{self.robot_path}/Lidar",
+                translation=np.array([0.05, 0, 0.2]),
+                config="Example_Rotary",
+                depth_range=10.0,
+                horizontal_resolution=0.25,
+                vertical_resolution=0.5,
+                horizontal_fov=360,
+                vertical_fov=30,
+                rotation_frequency=10,
+                samples_per_scan=1440
+            )
+            lidar.initialize()
+            
+            print("✓ LiDAR sensor added")
+        except Exception as e:
+            print(f"✗ Failed to add LiDAR: {e}")
+        
+        # Add IMU sensor
+        try:
+            from omni.isaac.core.sensors import Imu
+            
+            imu = Imu(
+                prim_path=f"{self.robot_path}/Imu",
+                position=np.array([0.0, 0.0, 0.1]),
+                orientation=np.array([0, 0, 0, 1])
+            )
+            imu.initialize()
+            
+            print("✓ IMU sensor added")
+        except Exception as e:
+            print(f"✗ Failed to add IMU: {e}")
+    
+    def setup_physics(self):
+        """Configure physics properties for the robot"""
+        print("Setting up physics properties...")
+        
+        # Set up basic physics for robot components
+        try:
+            from omni.isaac.core.utils.prims import setRigidBodyProperties
+            from omni.isaac.core.utils.prims import setStaticColliderProperties
+            
+            # Set properties for robot base
+            base_path = f"{self.robot_path}/Base"
+            setRigidBodyProperties(
+                prim_path=base_path,
+                mass=10.0,
+                linear_damping=0.05,
+                angular_damping=0.1
+            )
+            
+            setStaticColliderProperties(
+                prim_path=base_path,
+                approximation_shape="convexHull"
+            )
+            
+            print("✓ Physics properties configured")
+        except Exception as e:
+            print(f"✗ Failed to configure physics: {e}")
+    
+    def run_simulation(self):
+        """Run the complete simulation"""
+        print("Starting simulation...")
+        
+        # Reset the world to initialize all objects
+        self.world.reset()
+        
+        print("✓ World reset complete")
+        
+        # Run simulation for a few steps
+        for i in range(100):
+            self.world.step(render=True)
+            
+            if i % 20 == 0:
+                # Print robot position periodically
+                if self.robot:
+                    pos, quat = self.robot.get_world_pose()
+                    print(f"Step {i}: Robot position: [{pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f}]")
+        
+        print("✓ Simulation completed")
+        
+        # Cleanup
+        self.world.clear()
+        print("✓ World cleared")
+
+
+def main():
+    """Main function to run the exercise"""
+    print("="*60)
+    print("Isaac Sim Exercise: Complete Robot Setup")
+    print("="*60)
+    
+    # Create and run the exercise robot
+    exercise_robot = IsaacSimExerciseRobot()
+    
+    try:
+        exercise_robot.setup_world()
+        exercise_robot.add_environment_objects()
+        exercise_robot.add_robot()
+        exercise_robot.add_sensors()
+        exercise_robot.setup_physics()
+        exercise_robot.run_simulation()
+        
+        print("\n✓ Exercise complete successfully!")
+        
+    except Exception as e:
+        print(f"\n✗ Exercise failed with error: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### Step 3: Create Sensor Integration Script
+
+Create a script to handle sensor data and ROS 2 integration (`~/isaac_sim_exercises/scripts/sensor_integration.py`):
+
+```python
+#!/usr/bin/env python3
+"""
+Sensor integration script for Isaac Sim exercise
+"""
+
+import sys
+import os
+import numpy as np
+
+# Add Isaac Sim paths
+isaac_sim_path = os.environ.get('ISAAC_SIM_PATH')
+if isaac_sim_path:
+    sys.path.insert(0, os.path.join(isaac_sim_path, 'python'))
+    sys.path.insert(0, os.path.join(isaac_sim_path, 'kit'))
+
+# Import Isaac Sim modules
+from omni.isaac.core import World
+from omni.isaac.core.robots import Robot
+from omni.isaac.core.utils.nucleus import get_assets_root_path
+from omni.isaac.core.utils.stage import add_reference_to_stage
+from omni.isaac.core.utils.prims import get_prim_at_path
+
+# Import sensor modules
+from omni.isaac.sensor import Camera, RotatingLidarPhysX
+from omni.isaac.core.sensors import Imu
+
+# Import ROS 2 bridge (if available)
+try:
+    import rclpy
+    from sensor_msgs.msg import Image, LaserScan, Imu as ImuMsg
+    from geometry_msgs.msg import Twist
+    from std_msgs.msg import Header
+    ROS2_AVAILABLE = True
+except ImportError:
+    ROS2_AVAILABLE = False
+    print("ROS 2 not available, running in Isaac Sim only mode")
+
+
+class IsaacSimSensorProcessor:
+    """Class to handle sensor data processing"""
+    
+    def __init__(self, robot_path="/World/ExerciseRobot"):
+        self.robot_path = robot_path
+        self.world = None
+        self.camera = None
+        self.lidar = None
+        self.imu = None
+        
+        # ROS 2 related
+        self.ros_node = None
+        self.ros_initialized = False
+        
+        # Sensor data storage
+        self.camera_data = None
+        self.lidar_data = None
+        self.imu_data = None
+        
+    def initialize_sensors(self):
+        """Initialize all sensors in the simulation"""
+        print("Initializing sensors...")
+        
+        # Initialize sensors if they exist
+        try:
+            # Initialize camera
+            camera_path = f"{self.robot_path}/FrontCamera"
+            camera_prim = get_prim_at_path(camera_path)
+            if camera_prim:
+                self.camera = Camera(prim_path=camera_path)
+                self.camera.initialize()
+                print("✓ Camera initialized")
+            else:
+                print("⚠ Camera not found in scene")
+        
+        except Exception as e:
+            print(f"✗ Failed to initialize camera: {e}")
+        
+        try:
+            # Initialize LiDAR
+            lidar_path = f"{self.robot_path}/Lidar"
+            lidar_prim = get_prim_at_path(lidar_path)
+            if lidar_prim:
+                self.lidar = RotatingLidarPhysX(prim_path=lidar_path)
+                self.lidar.initialize()
+                print("✓ LiDAR initialized")
+            else:
+                print("⚠ LiDAR not found in scene")
+        
+        except Exception as e:
+            print(f"✗ Failed to initialize LiDAR: {e}")
+        
+        try:
+            # Initialize IMU
+            imu_path = f"{self.robot_path}/Imu"
+            imu_prim = get_prim_at_path(imu_path)
+            if imu_prim:
+                self.imu = Imu(prim_path=imu_path)
+                self.imu.initialize()
+                print("✓ IMU initialized")
+            else:
+                print("⚠ IMU not found in scene")
+        
+        except Exception as e:
+            print(f"✗ Failed to initialize IMU: {e}")
+    
+    def initialize_ros2(self):
+        """Initialize ROS 2 communication if available"""
+        if not ROS2_AVAILABLE:
+            print("⚠ ROS 2 not available, skipping initialization")
+            return False
+        
+        try:
+            rclpy.init()
+            self.ros_node = rclpy.create_node('isaac_sim_sensor_processor')
+            
+            # Create publishers for sensor data
+            self.image_pub = self.ros_node.create_publisher(Image, '/camera/image_raw', 10)
+            self.laser_pub = self.ros_node.create_publisher(LaserScan, '/scan', 10)
+            self.imu_pub = self.ros_node.create_publisher(ImuMsg, '/imu/data', 10)
+            
+            # Create subscriber for robot control
+            self.cmd_vel_sub = self.ros_node.create_subscription(
+                Twist, '/cmd_vel', self.cmd_vel_callback, 10)
+            
+            print("✓ ROS 2 initialized")
+            self.ros_initialized = True
+            return True
+            
+        except Exception as e:
+            print(f"✗ Failed to initialize ROS 2: {e}")
+            return False
+    
+    def cmd_vel_callback(self, msg):
+        """Handle velocity commands from ROS 2"""
+        print(f"Received velocity command: linear={msg.linear.x}, angular={msg.angular.z}")
+        # In a real implementation, this would control the robot
+        # For now, we'll just print the command
+    
+    def capture_sensor_data(self):
+        """Capture and process data from all sensors"""
+        try:
+            # Capture camera data
+            if self.camera:
+                try:
+                    self.camera_data = self.camera.get_rgb()
+                    print(f"✓ Captured camera data: shape {self.camera_data.shape}")
+                    
+                    # Publish to ROS 2 if available
+                    if self.ros_initialized:
+                        self.publish_camera_data()
+                        
+                except Exception as e:
+                    print(f"✗ Failed to capture camera data: {e}")
+        
+        except Exception as e:
+            print(f"✗ Camera capture error: {e}")
+        
+        try:
+            # Capture LiDAR data
+            if self.lidar:
+                try:
+                    self.lidar_data = self.lidar.get_linear_depth_data()
+                    print(f"✓ Captured LiDAR data: shape {self.lidar_data.shape}")
+                    
+                    # Publish to ROS 2 if available
+                    if self.ros_initialized:
+                        self.publish_lidar_data()
+                        
+                except Exception as e:
+                    print(f"✗ Failed to capture LiDAR data: {e}")
+        
+        except Exception as e:
+            print(f"✗ LiDAR capture error: {e}")
+        
+        try:
+            # Capture IMU data
+            if self.imu:
+                try:
+                    self.imu_data = {
+                        'linear_acceleration': self.imu.get_linear_acceleration(),
+                        'angular_velocity': self.imu.get_angular_velocity()
+                    }
+                    print(f"✓ Captured IMU data: linear_acc={self.imu_data['linear_acceleration']}")
+                    
+                    # Publish to ROS 2 if available
+                    if self.ros_initialized:
+                        self.publish_imu_data()
+                        
+                except Exception as e:
+                    print(f"✗ Failed to capture IMU data: {e}")
+        
+        except Exception as e:
+            print(f"✗ IMU capture error: {e}")
+    
+    def publish_camera_data(self):
+        """Publish camera data to ROS 2"""
+        if not (self.ros_initialized and self.camera_data is not None):
+            return
+        
+        try:
+            # Convert numpy array to ROS Image message
+            header = Header()
+            header.stamp = self.ros_node.get_clock().now().to_msg()
+            header.frame_id = "camera_frame"
+            
+            # Create Image message (simplified - in practice you'd convert the data properly)
+            img_msg = Image()
+            img_msg.header = header
+            img_msg.height = self.camera_data.shape[0]
+            img_msg.width = self.camera_data.shape[1]
+            img_msg.encoding = "rgb8"  # TODO: Proper conversion needed
+            img_msg.is_bigendian = False
+            img_msg.step = self.camera_data.shape[1] * 3  # 3 channels (RGB)
+            # img_msg.data = self.camera_data.flatten().tobytes()  # TODO: Proper data conversion
+            
+            self.image_pub.publish(img_msg)
+            print("✓ Camera data published to ROS 2")
+            
+        except Exception as e:
+            print(f"✗ Failed to publish camera data: {e}")
+    
+    def publish_lidar_data(self):
+        """Publish LiDAR data to ROS 2"""
+        if not (self.ros_initialized and self.lidar_data is not None):
+            return
+        
+        try:
+            # Convert lidar data to LaserScan message
+            laser_msg = LaserScan()
+            laser_msg.header.stamp = self.ros_node.get_clock().now().to_msg()
+            laser_msg.header.frame_id = "lidar_frame"
+            
+            # Define scan parameters (these should match your LiDAR config)
+            laser_msg.angle_min = -np.pi  # Assuming 360° scan
+            laser_msg.angle_max = np.pi
+            laser_msg.angle_increment = 2 * np.pi / len(self.lidar_data) if len(self.lidar_data) > 0 else 0.01
+            laser_msg.time_increment = 0.0  # Time between measurements
+            laser_msg.scan_time = 0.1  # Time between scans
+            laser_msg.range_min = 0.1  # Minimum range
+            laser_msg.range_max = 10.0  # Maximum range
+            
+            # Convert distance data to ranges
+            laser_msg.ranges = self.lidar_data.tolist() if self.lidar_data is not None else []
+            laser_msg.intensities = []  # No intensity data for depth only
+            
+            self.laser_pub.publish(laser_msg)
+            print("✓ LiDAR data published to ROS 2")
+            
+        except Exception as e:
+            print(f"✗ Failed to publish LiDAR data: {e}")
+    
+    def publish_imu_data(self):
+        """Publish IMU data to ROS 2"""
+        if not (self.ros_initialized and self.imu_data is not None):
+            return
+        
+        try:
+            # Create IMU message
+            imu_msg = ImuMsg()
+            imu_msg.header.stamp = self.ros_node.get_clock().now().to_msg()
+            imu_msg.header.frame_id = "imu_frame"
+            
+            # Set linear acceleration
+            imu_msg.linear_acceleration.x = self.imu_data['linear_acceleration'][0]
+            imu_msg.linear_acceleration.y = self.imu_data['linear_acceleration'][1]
+            imu_msg.linear_acceleration.z = self.imu_data['linear_acceleration'][2]
+            
+            # For angular velocity and orientation, we'd need additional data
+            # Set to zero for now (in practice, you'd integrate or use other sources)
+            imu_msg.angular_velocity.x = self.imu_data['angular_velocity'][0]
+            imu_msg.angular_velocity.y = self.imu_data['angular_velocity'][1]
+            imu_msg.angular_velocity.z = self.imu_data['angular_velocity'][2]
+            
+            # Orientation unavailable from this IMU API
+            imu_msg.orientation.w = 1.0  # Default orientation
+            
+            self.imu_pub.publish(imu_msg)
+            print("✓ IMU data published to ROS 2")
+            
+        except Exception as e:
+            print(f"✗ Failed to publish IMU data: {e}")
+    
+    def run_sensor_loop(self, num_steps=200):
+        """Run the sensor processing loop"""
+        print(f"Starting sensor processing loop for {num_steps} steps...")
+        
+        # Initialize world if not done already
+        if not self.world:
+            self.world = World(stage_units_in_meters=1.0)
+            self.world.scene.add_default_ground_plane()
+            
+            # Add a simple robot if needed
+            assets_root_path = get_assets_root_path()
+            if assets_root_path:
+                try:
+                    self.world.scene.add(
+                        Robot(
+                            prim_path="/World/SensorRobot",
+                            name="sensor_robot",
+                            usd_path=assets_root_path + "/Isaac/Robots/TurtleBot3Burger/turtlebot3_burger.usd",
+                            position=[0, 0, 0.1],
+                            orientation=[0, 0, 0, 1]
+                        )
+                    )
+                except:
+                    print("Using basic robot for sensor testing")
+                    from omni.isaac.core.utils.prims import create_prim
+                    create_prim(
+                        prim_path="/World/SensorRobot",
+                        prim_type="Xform",
+                        position=[0, 0, 0.5]
+                    )
+            
+            self.world.reset()
+        
+        # Initialize sensors and ROS2
+        self.initialize_sensors()
+        self.initialize_ros2()
+        
+        # Main sensor loop
+        for i in range(num_steps):
+            # Step the simulation
+            self.world.step(render=True)
+            
+            # Capture sensor data periodically
+            if i % 10 == 0:  # Capture data every 10 steps
+                self.capture_sensor_data()
+                
+                # Spin ROS 2 to process callbacks
+                if self.ros_node:
+                    rclpy.spin_once(self.ros_node, timeout_sec=0.01)
+        
+        # Cleanup
+        if self.ros_node:
+            self.ros_node.destroy_node()
+            rclpy.shutdown()
+        
+        if self.world:
+            self.world.clear()
+        
+        print("✓ Sensor processing loop completed")
+
+
+def main():
+    """Main function to run sensor integration exercise"""
+    print("="*60)
+    print("Isaac Sim Exercise: Sensor Integration")
+    print("="*60)
+    
+    # Create sensor processor
+    sensor_processor = IsaacSimSensorProcessor()
+    
+    try:
+        sensor_processor.run_sensor_loop(num_steps=200)
+        print("\n✓ Sensor integration exercise completed successfully!")
+        
+    except Exception as e:
+        print(f"\n✗ Sensor integration exercise failed: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+## Exercise 2: Robot Navigation in Isaac Sim
+
+### Objective
+Implement a basic navigation system in Isaac Sim using path planning and obstacle avoidance.
+
+Create the navigation script (`~/isaac_sim_exercises/scripts/navigation_exercise.py`):
+
+```python
+#!/usr/bin/env python3
+"""
+Navigation exercise script for Isaac Sim
+"""
+
+import sys
+import os
+import numpy as np
+import math
+
+# Add Isaac Sim paths
+isaac_sim_path = os.environ.get('ISAAC_SIM_PATH')
+if isaac_sim_path:
+    sys.path.insert(0, os.path.join(isaac_sim_path, 'python'))
+    sys.path.insert(0, os.path.join(isaac_sim_path, 'kit'))
+
+# Import Isaac Sim modules
+from omni.isaac.core import World
+from omni.isaac.core.robots import Robot
+from omni.isaac.core.utils.nucleus import get_assets_root_path
+from omni.isaac.core.utils.prims import create_prim
+from omni.isaac.core.utils.stage import add_reference_to_stage
+from omni.isaac.core.utils.viewports import get_viewport_window
+from omni.isaac.core.materials import PreviewSurface
+
+# Import sensor modules
+from omni.isaac.sensor import RotatingLidarPhysX
+
+
+class IsaacSimNavigationExercise:
+    """Class to handle navigation in Isaac Sim"""
+    
+    def __init__(self):
+        self.world = None
+        self.robot = None
+        self.lidar = None
+        self.robot_path = "/World/NavigationRobot"
+        self.target_position = np.array([3.0, 2.0, 0.0])
+        self.current_position = np.array([0.0, 0.0, 0.0])
+        self.current_orientation = 0.0  # Yaw angle in radians
+        
+        # Navigation parameters
+        self.linear_speed = 0.3  # m/s
+        self.angular_speed = 0.5  # rad/s
+        self.safe_distance = 0.8  # meters
+        self.arrival_threshold = 0.3  # meters
+        
+        # Path planning
+        self.path = []
+        self.path_index = 0
+    
+    def setup_world(self):
+        """Set up the navigation world with obstacles"""
+        print("Setting up navigation world...")
+        
+        # Create the world
+        self.world = World(stage_units_in_meters=1.0)
+        self.world.scene.add_default_ground_plane()
+        
+        # Add start and target positions
+        # Start position: (0, 0)
+        # Target position: (3, 2)
+        
+        # Add obstacles
+        create_prim(
+            prim_path="/World/Obstacle1",
+            prim_type="Cylinder",
+            position=[1.5, 1.0, 0.5],
+            scale=[0.5, 0.5, 1.0]
+        )
+        
+        create_prim(
+            prim_path="/World/Obstacle2",
+            prim_type="Cube",
+            position=[2.0, -1.0, 0.5],
+            scale=[0.7, 0.7, 1.0]
+        )
+        
+        create_prim(
+            prim_path="/World/Obstacle3",
+            prim_type="Cylinder",
+            position=[0.5, 2.0, 0.5],
+            scale=[0.4, 0.4, 1.0]
+        )
+        
+        # Add target marker
+        create_prim(
+            prim_path="/World/Target",
+            prim_type="Sphere",
+            position=[self.target_position[0], self.target_position[1], 0.5],
+            scale=[0.3, 0.3, 0.3]
+        )
+        
+        # Get robot assets and add to world
+        assets_root_path = get_assets_root_path()
+        if assets_root_path:
+            try:
+                self.robot = self.world.scene.add(
+                    Robot(
+                        prim_path=self.robot_path,
+                        name="navigation_robot",
+                        usd_path=assets_root_path + "/Isaac/Robots/TurtleBot3Burger/turtlebot3_burger.usd",
+                        position=[0, 0, 0.1],
+                        orientation=[0, 0, 0, 1]
+                    )
+                )
+            except:
+                print("Using basic robot for navigation exercise")
+                # Create a basic robot if assets unavailable
+                create_prim(
+                    prim_path=self.robot_path,
+                    prim_type="Xform",
+                    position=[0.0, 0.0, 0.5]
+                )
+        
+        # Add LiDAR to the robot
+        try:
+            self.lidar = RotatingLidarPhysX(
+                prim_path=f"{self.robot_path}/Lidar",
+                translation=np.array([0.05, 0, 0.2]),
+                config="Example_Rotary",
+                depth_range=10.0,
+                horizontal_resolution=0.25,
+                vertical_resolution=0.5,
+                horizontal_fov=360,
+                vertical_fov=30,
+                rotation_frequency=10,
+                samples_per_scan=1440
+            )
+            self.lidar.initialize()
+        except Exception as e:
+            print(f"LiDAR setup failed: {e}")
+        
+        # Reset the world to initialize all objects
+        self.world.reset()
+        
+        print("✓ Navigation world setup complete")
+    
+    def get_robot_state(self):
+        """Get current robot state (position and orientation)"""
+        if self.robot:
+            pos, quat = self.robot.get_world_pose()
+            self.current_position = np.array([pos[0], pos[1], pos[2]])
+            
+            # Convert quaternion to yaw (simplified for 2D navigation)
+            # For a quaternion [x, y, z, w], yaw = atan2(2*(w*z + x*y), w^2 + x^2 - y^2 - z^2)
+            w, x, y, z = quat
+            self.current_orientation = math.atan2(2*(w*z + x*y), w*w + x*x - y*y - z*z)
+        
+        return self.current_position, self.current_orientation
+    
+    def get_lidar_data(self):
+        """Get LiDAR data to detect obstacles"""
+        if self.lidar:
+            try:
+                return self.lidar.get_linear_depth_data()
+            except:
+                # Return empty data if LiDAR is not available
+                return np.ones(360) * 10.0
+        else:
+            # Return empty data if no LiDAR
+            return np.ones(360) * 10.0
+    
+    def check_obstacles_ahead(self, lidar_data):
+        """Check for obstacles in front of the robot"""
+        # Check the front 30 degrees of the LiDAR data (15 points)
+        front_start = len(lidar_data) // 2 - 15
+        front_end = len(lidar_data) // 2 + 15
+        
+        if front_start < 0:
+            front_start = 0
+        if front_end >= len(lidar_data):
+            front_end = len(lidar_data) - 1
+        
+        # Check if any distance is less than safe distance
+        for i in range(front_start, front_end):
+            if lidar_data[i] < self.safe_distance and not np.isnan(lidar_data[i]):
+                return True
+        
+        return False
+    
+    def calculate_control_command(self):
+        """Calculate control command to navigate to target"""
+        # Get current state
+        pos, orientation = self.get_robot_state()
+        
+        # Calculate direction to target
+        target_delta = self.target_position - pos
+        target_distance = np.linalg.norm(target_delta[:2])  # Only x,y plane
+        
+        # Check if we've reached the target
+        if target_distance < self.arrival_threshold:
+            return 0.0, 0.0  # Stop moving
+        
+        # Calculate target angle
+        target_angle = np.arctan2(target_delta[1], target_delta[0])
+        
+        # Calculate angle difference
+        angle_diff = target_angle - orientation
+        # Normalize angle to [-π, π]
+        while angle_diff > math.pi:
+            angle_diff -= 2 * math.pi
+        while angle_diff < -math.pi:
+            angle_diff += 2 * math.pi
+        
+        # Get LiDAR data to check for obstacles
+        lidar_data = self.get_lidar_data()
+        obstacle_ahead = self.check_obstacles_ahead(lidar_data)
+        
+        # Navigation logic
+        if obstacle_ahead:
+            # If obstacle ahead, turn away
+            return 0.0, self.angular_speed  # Rotate to avoid obstacle
+        elif abs(angle_diff) > 0.2:  # If not aligned with target
+            # Rotate toward target
+            angular_cmd = self.angular_speed if angle_diff > 0 else -self.angular_speed
+            return 0.0, angular_cmd
+        else:
+            # Move toward target
+            return self.linear_speed, 0.0
+    
+    def execute_navigation(self, max_steps=2000):
+        """Execute the navigation task"""
+        print("Starting navigation task...")
+        print(f"Target position: [{self.target_position[0]:.2f}, {self.target_position[1]:.2f}]")
+        
+        reached_target = False
+        
+        for step in range(max_steps):
+            # Step the simulation
+            self.world.step(render=True)
+            
+            # Calculate control commands every few steps for efficiency
+            if step % 5 == 0:
+                linear_vel, angular_vel = self.calculate_control_command()
+                
+                # Apply control (in a real implementation, you'd control the robot's actuators)
+                # For this exercise, we'll just print the commands
+                print(f"Step {step}: v={linear_vel:.2f}, ω={angular_vel:.2f}")
+                
+                # Check if we've reached the target
+                pos, _ = self.get_robot_state()
+                distance_to_target = np.linalg.norm(self.target_position[:2] - pos[:2])
+                
+                if distance_to_target < self.arrival_threshold:
+                    print(f"✓ Reached target! Final distance: {distance_to_target:.2f}m")
+                    reached_target = True
+                    break
+            
+            # Print status periodically
+            if step % 100 == 0:
+                pos, _ = self.get_robot_state()
+                distance_to_target = np.linalg.norm(self.target_position[:2] - pos[:2])
+                print(f"Step {step}: Distance to target: {distance_to_target:.2f}m")
+        
+        if not reached_target:
+            pos, _ = self.get_robot_state()
+            distance_to_target = np.linalg.norm(self.target_position[:2] - pos[:2])
+            print(f"⚠ Navigation ended without reaching target. Final distance: {distance_to_target:.2f}m")
+        
+        print("✓ Navigation task completed")
+    
+    def run_exercise(self):
+        """Run the complete navigation exercise"""
+        print("="*60)
+        print("Isaac Sim Exercise: Robot Navigation")
+        print("="*60)
+        
+        try:
+            self.setup_world()
+            self.execute_navigation(max_steps=2000)
+            
+            # Cleanup
+            self.world.clear()
+            
+            print("\n✓ Navigation exercise completed!")
+            
+        except Exception as e:
+            print(f"\n✗ Navigation exercise failed: {e}")
+            import traceback
+            traceback.print_exc()
+
+
+def main():
+    """Main function to run navigation exercise"""
+    nav_exercise = IsaacSimNavigationExercise()
+    nav_exercise.run_exercise()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+## Exercise 3: Advanced Sensor Processing
+
+### Objective
+Implement advanced sensor processing including SLAM-like capabilities using Isaac Sim sensors.
+
+Create the advanced sensor script (`~/isaac_sim_exercises/scripts/advanced_sensor_exercise.py`):
+
+```python
+#!/usr/bin/env python3
+"""
+Advanced sensor processing exercise for Isaac Sim
+"""
+
+import sys
+import os
+import numpy as np
+import math
+from collections import deque
+
+# Add Isaac Sim paths
+isaac_sim_path = os.environ.get('ISAAC_SIM_PATH')
+if isaac_sim_path:
+    sys.path.insert(0, os.path.join(isaac_sim_path, 'python'))
+    sys.path.insert(0, os.path.join(isaac_sim_path, 'kit'))
+
+# Import Isaac Sim modules
+from omni.isaac.core import World
+from omni.isaac.core.robots import Robot
+from omni.isaac.core.utils.nucleus import get_assets_root_path
+from omni.isaac.core.utils.prims import create_prim
+from omni.isaac.core.utils.stage import add_reference_to_stage
+
+# Import sensor modules
+from omni.isaac.sensor import RotatingLidarPhysX, Camera
+from omni.isaac.core.sensors import Imu
+
+
+class AdvancedSensorProcessor:
+    """Class to handle advanced sensor processing"""
+    
+    def __init__(self):
+        self.world = None
+        self.robot = None
+        self.lidar = None
+        self.camera = None
+        self.imu = None
+        
+        # Sensor data storage
+        self.lidar_data = None
+        self.camera_data = None
+        self.imu_data = None
+        
+        # Robot state tracking
+        self.position_history = deque(maxlen=100)
+        self.orientation_history = deque(maxlen=100)
+        
+        # Mapping and localization
+        self.occupancy_grid = np.zeros((100, 100))  # Simple 100x100 grid
+        self.grid_resolution = 0.1  # 10cm per cell
+        self.grid_offset = np.array([50, 50])  # Center of grid at (0,0)
+        
+        # Feature detection
+        self.features = []  # Detected features in the environment
+    
+    def setup_environment(self):
+        """Set up the environment for advanced sensor processing"""
+        print("Setting up advanced sensor processing environment...")
+        
+        # Create the world
+        self.world = World(stage_units_in_meters=1.0)
+        self.world.scene.add_default_ground_plane()
+        
+        # Add various objects to create a rich environment for sensing
+        # Add multiple obstacles of different shapes
+        create_prim(
+            prim_path="/World/Obstacle_Sphere",
+            prim_type="Sphere",
+            position=[2.0, 1.0, 0.5],
+            scale=[0.3, 0.3, 0.3]
+        )
+        
+        create_prim(
+            prim_path="/World/Obstacle_Box",
+            prim_type="Cube",
+            position=[-1.5, 2.0, 0.5],
+            scale=[0.5, 0.8, 1.0]
+        )
+        
+        create_prim(
+            prim_path="/World/Obstacle_Cylinder",
+            prim_type="Cylinder",
+            position=[1.0, -2.0, 0.7],
+            scale=[0.4, 0.4, 1.4]
+        )
+        
+        # Add some walls
+        create_prim(
+            prim_path="/World/Wall_Vertical",
+            prim_type="Cuboid",
+            position=[3.0, 0, 1.0],
+            scale=[0.1, 4.0, 2.0]
+        )
+        
+        create_prim(
+            prim_path="/World/Wall_Horizontal",
+            prim_type="Cuboid",
+            position=[0, 3.0, 1.0],
+            scale=[4.0, 0.1, 2.0]
+        )
+        
+        # Add robot
+        assets_root_path = get_assets_root_path()
+        if assets_root_path:
+            try:
+                self.robot = self.world.scene.add(
+                    Robot(
+                        prim_path="/World/AdvancedSensorRobot",
+                        name="advanced_sensor_robot",
+                        usd_path=assets_root_path + "/Isaac/Robots/TurtleBot3Burger/turtlebot3_burger.usd",
+                        position=[0, 0, 0.1],
+                        orientation=[0, 0, 0, 1]
+                    )
+                )
+            except:
+                # Fallback: create basic robot
+                create_prim(
+                    prim_path="/World/AdvancedSensorRobot",
+                    prim_type="Xform",
+                    position=[0.0, 0.0, 0.5]
+                )
+        
+        # Add sensors to robot
+        try:
+            # Add LiDAR
+            self.lidar = RotatingLidarPhysX(
+                prim_path="/World/AdvancedSensorRobot/Lidar",
+                translation=np.array([0.05, 0, 0.2]),
+                config="Example_Rotary",
+                depth_range=10.0,
+                horizontal_resolution=0.25,
+                vertical_resolution=0.5,
+                horizontal_fov=360,
+                vertical_fov=30,
+                rotation_frequency=10,
+                samples_per_scan=1440
+            )
+            self.lidar.initialize()
+        except:
+            print("LiDAR initialization failed")
+        
+        try:
+            # Add camera
+            self.camera = Camera(
+                prim_path="/World/AdvancedSensorRobot/Camera",
+                position=np.array([0.1, 0, 0.1]),
+                frequency=30,
+                resolution=(640, 480)
+            )
+            self.camera.initialize()
+        except:
+            print("Camera initialization failed")
+        
+        try:
+            # Add IMU
+            self.imu = Imu(
+                prim_path="/World/AdvancedSensorRobot/Imu",
+                position=np.array([0.0, 0.0, 0.1]),
+                orientation=np.array([0, 0, 0, 1])
+            )
+            self.imu.initialize()
+        except:
+            print("IMU initialization failed")
+        
+        # Reset the world
+        self.world.reset()
+        print("✓ Advanced sensor processing environment setup complete")
+    
+    def get_robot_pose(self):
+        """Get robot's current position and orientation"""
+        if self.robot:
+            pos, quat = self.robot.get_world_pose()
+            
+            # Convert quaternion to yaw angle
+            w, x, y, z = quat
+            yaw = math.atan2(2*(w*z + x*y), w*w + x*x - y*y - z*z)
+            
+            return np.array([pos[0], pos[1], pos[2]]), yaw
+        
+        return np.array([0.0, 0.0, 0.0]), 0.0
+    
+    def process_lidar_data(self):
+        """Process LiDAR data to detect obstacles and map environment"""
+        if not self.lidar:
+            return
+        
+        try:
+            lidar_data = self.lidar.get_linear_depth_data()
+            
+            if lidar_data is not None and len(lidar_data) > 0:
+                # Get robot's current pose
+                robot_pos, robot_yaw = self.get_robot_pose()
+                
+                # Convert polar coordinates to Cartesian for mapping
+                angles = np.linspace(-np.pi, np.pi, len(lidar_data))
+                
+                # Filter out invalid measurements
+                valid_indices = np.where((lidar_data > 0.1) & (lidar_data < 10.0))
+                valid_ranges = lidar_data[valid_indices]
+                valid_angles = angles[valid_indices]
+                
+                # Convert to global coordinates
+                local_x = valid_ranges * np.cos(valid_angles)
+                local_y = valid_ranges * np.sin(valid_angles)
+                
+                # Transform to global frame
+                cos_yaw = np.cos(robot_yaw)
+                sin_yaw = np.sin(robot_yaw)
+                
+                global_x = local_x * cos_yaw - local_y * sin_yaw + robot_pos[0]
+                global_y = local_x * sin_yaw + local_y * cos_yaw + robot_pos[1]
+                
+                # Update occupancy grid
+                for x, y in zip(global_x, global_y):
+                    # Convert world coordinates to grid coordinates
+                    grid_x = int((x / self.grid_resolution) + self.grid_offset[0])
+                    grid_y = int((y / self.grid_resolution) + self.grid_offset[1])
+                    
+                    # Check bounds
+                    if 0 <= grid_x < self.occupancy_grid.shape[0] and 0 <= grid_y < self.occupancy_grid.shape[1]:
+                        # Mark as occupied (set to 1)
+                        self.occupancy_grid[grid_x, grid_y] = 1
+                
+                # Also mark robot's current position as free
+                robot_grid_x = int((robot_pos[0] / self.grid_resolution) + self.grid_offset[0])
+                robot_grid_y = int((robot_pos[1] / self.grid_resolution) + self.grid_offset[1])
+                
+                if 0 <= robot_grid_x < self.occupancy_grid.shape[0] and 0 <= robot_grid_y < self.occupancy_grid.shape[1]:
+                    # Mark robot position as free
+                    self.occupancy_grid[robot_grid_x, robot_grid_y] = 0.5  # Free space
+                
+                print(f"✓ Processed LiDAR data: {len(valid_ranges)} valid measurements")
+                return True
+            
+        except Exception as e:
+            print(f"✗ LiDAR processing error: {e}")
+        
+        return False
+    
+    def process_camera_data(self):
+        """Process camera data to detect features"""
+        if not self.camera:
+            return
+        
+        try:
+            camera_data = self.camera.get_rgb()
+            
+            if camera_data is not None and camera_data.size > 0:
+                # In a real implementation, you would perform computer vision processing
+                # such as feature detection, object recognition, etc.
+                
+                print(f"✓ Processed camera data: shape {camera_data.shape}")
+                
+                # For this exercise, we'll just record that we have image data
+                self.camera_data = camera_data
+                
+                # Example feature detection (simplified)
+                height, width = camera_data.shape[:2]
+                
+                # Detect corners using a simple method (simplified)
+                corners = []
+                
+                # In a real implementation, you would use OpenCV or other CV library
+                # For now, just simulate detecting some features
+                corners.append((width//4, height//4))    # Top left
+                corners.append((3*width//4, height//4))  # Top right
+                corners.append((width//4, 3*height//4)) # Bottom left
+                corners.append((3*width//4, 3*height//4)) # Bottom right
+                
+                print(f"✓ Detected {len(corners)} features in camera view")
+                
+                return True
+        
+        except Exception as e:
+            print(f"✗ Camera processing error: {e}")
+        
+        return False
+    
+    def process_imu_data(self):
+        """Process IMU data for state estimation"""
+        if not self.imu:
+            return
+        
+        try:
+            linear_acc = self.imu.get_linear_acceleration()
+            angular_vel = self.imu.get_angular_velocity()
+            
+            # Store data
+            self.imu_data = {
+                'linear_acceleration': linear_acc,
+                'angular_velocity': angular_vel
+            }
+            
+            print(f"✓ Processed IMU data: acc=({linear_acc[0]:.3f}, {linear_acc[1]:.3f}, {linear_acc[2]:.3f})")
+            return True
+            
+        except Exception as e:
+            print(f"✗ IMU processing error: {e}")
+        
+        return False
+    
+    def create_occupancy_map(self):
+        """Create and visualize occupancy map from sensor data"""
+        print(f"Creating occupancy map from sensor data...")
+        
+        # In a real implementation, you would create a more sophisticated map
+        # For this exercise, we'll just print statistics about the grid
+        
+        occupied_cells = np.sum(self.occupancy_grid == 1)
+        free_cells = np.sum(self.occupancy_grid == 0.5)
+        unknown_cells = np.sum(self.occupancy_grid == 0)
+        
+        total_cells = self.occupancy_grid.size
+        
+        print(f"Occupancy map statistics:")
+        print(f"  Total cells: {total_cells}")
+        print(f"  Occupied: {occupied_cells} ({occupied_cells/total_cells*100:.1f}%)")
+        print(f"  Free: {free_cells} ({free_cells/total_cells*100:.1f}%)")
+        print(f"  Unknown: {unknown_cells} ({unknown_cells/total_cells*100:.1f}%)")
+        
+        # In a real implementation, you would save this as an image or use it for navigation
+        return self.occupancy_grid
+    
+    def estimate_robot_motion(self):
+        """Estimate robot motion using sensor fusion"""
+        print("Estimating robot motion...")
+        
+        # Get current pose
+        current_pos, current_yaw = self.get_robot_pose()
+        
+        # Store in history
+        self.position_history.append(current_pos.copy())
+        self.orientation_history.append(current_yaw)
+        
+        # Estimate velocity if we have enough history
+        if len(self.position_history) >= 2:
+            # Calculate displacement
+            prev_pos = self.position_history[-2]
+            displacement = current_pos - prev_pos
+            
+            # Calculate velocity (assuming fixed time step of 0.01s)
+            velocity = displacement / 0.01  # This is approximate
+            
+            print(f"Estimated velocity: ({velocity[0]:.3f}, {velocity[1]:.3f}, {velocity[2]:.3f}) m/s")
+        
+        return current_pos, current_yaw
+    
+    def run_sensor_processing_loop(self, num_steps=1000):
+        """Run the advanced sensor processing loop"""
+        print("Starting advanced sensor processing loop...")
+        
+        for step in range(num_steps):
+            # Step the simulation
+            self.world.step(render=True)
+            
+            # Process sensors every few steps
+            if step % 10 == 0:
+                print(f"\nProcessing step {step}...")
+                
+                # Process all sensors
+                lidar_ok = self.process_lidar_data()
+                camera_ok = self.process_camera_data()
+                imu_ok = self.process_imu_data()
+                
+                # Estimate motion
+                pos, yaw = self.estimate_robot_motion()
+                print(f"Robot pose: pos=({pos[0]:.2f}, {pos[1]:.2f}), yaw={yaw:.3f}")
+                
+                # Print processing status
+                status = "✓" if (lidar_ok or camera_ok or imu_ok) else "✗"
+                print(f"{status} Sensor processing completed")
+            
+            # Print occupancy map statistics periodically
+            if step % 100 == 0 and step > 0:
+                print(f"\nStep {step} - Map Update:")
+                self.create_occupancy_map()
+        
+        print("✓ Advanced sensor processing loop completed")
+    
+    def run_exercise(self):
+        """Run the complete advanced sensor processing exercise"""
+        print("="*60)
+        print("Isaac Sim Exercise: Advanced Sensor Processing")
+        print("="*60)
+        
+        try:
+            self.setup_environment()
+            self.run_sensor_processing_loop(num_steps=1000)
+            
+            # Final map
+            print(f"\nFinal occupancy map:")
+            occupancy_map = self.create_occupancy_map()
+            
+            # Cleanup
+            self.world.clear()
+            
+            print("\n✓ Advanced sensor processing exercise completed!")
+            
+        except Exception as e:
+            print(f"\n✗ Advanced sensor processing exercise failed: {e}")
+            import traceback
+            traceback.print_exc()
+
+
+def main():
+    """Main function to run advanced sensor processing exercise"""
+    sensor_processor = AdvancedSensorProcessor()
+    sensor_processor.run_exercise()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+## Exercise 4: Isaac Sim Extension Development
+
+### Objective
+Create a custom Isaac Sim extension for robotics applications.
+
+Create the extension script (`~/isaac_sim_exercises/scripts/custom_extension_exercise.py`):
+
+```python
+# Example extension structure (this would typically be placed in the extensions folder)
+# For this exercise, we'll show how to structure and develop an extension
+
+"""
+Custom Isaac Sim Extension for Robotics
+
+This example shows how to create a custom extension that adds robotics-specific
+functionality to Isaac Sim, such as a custom UI panel for robot control or
+an automated testing framework.
+"""
+
+import omni.ext
+import omni.ui as ui
+from omni.isaac.core import World
+from omni.isaac.core.robots import Robot
+from omni.isaac.core.utils.nucleus import get_assets_root_path
+import carb
+
+# The extension class
+class RoboticsExtension(omni.ext.IExt):
+    """Custom Robotics Extension for Isaac Sim"""
+    
+    def on_startup(self, ext_id):
+        """Called when the extension is started"""
+        print(f"[robotics.extension] Starting extension: {ext_id}")
+        
+        # Create a UI window for the extension
+        self._window = ui.Window("Robotics Control", width=300, height=400)
+        
+        with self._window.frame:
+            with ui.VStack():
+                ui.Label("Robotics Extension Panel")
+                
+                # Add UI elements for robot control
+                self._robot_control_frame = ui.CollapsableFrame("Robot Control")
+                with self._robot_control_frame:
+                    with ui.VStack():
+                        # Add buttons for controlling a robot
+                        ui.Button("Move Forward", clicked_fn=self._move_forward)
+                        ui.Button("Move Backward", clicked_fn=self._move_backward)
+                        ui.Button("Turn Left", clicked_fn=self._turn_left)
+                        ui.Button("Turn Right", clicked_fn=self._turn_right)
+                        ui.Button("Stop", clicked_fn=self._stop_robot)
+                
+                # Add UI elements for sensor visualization
+                self._sensor_frame = ui.CollapsableFrame("Sensor Visualization")
+                with self._sensor_frame:
+                    with ui.VStack():
+                        ui.Button("Visualize LiDAR", clicked_fn=self._visualize_lidar)
+                        ui.Button("Show Camera Feed", clicked_fn=self._show_camera)
+        
+        # Initialize Isaac Sim components
+        self._world = World(stage_units_in_meters=1.0)
+        self._robot = None
+        
+        print("[robotics.extension] Extension started successfully")
+    
+    def on_shutdown(self):
+        """Called when the extension is shut down"""
+        print("[robotics.extension] Shutting down extension")
+        
+        # Clean up UI
+        if self._window:
+            self._window.destroy()
+        
+        # Clean up Isaac Sim components
+        if self._world:
+            self._world.cleanup()
+    
+    def _move_forward(self):
+        """Move robot forward"""
+        print("[robotics.extension] Move Forward command")
+        # In real implementation, this would control the robot
+        
+    def _move_backward(self):
+        """Move robot backward"""
+        print("[robotics.extension] Move Backward command")
+        
+    def _turn_left(self):
+        """Turn robot left"""
+        print("[robotics.extension] Turn Left command")
+        
+    def _turn_right(self):
+        """Turn robot right"""
+        print("[robotics.extension] Turn Right command")
+        
+    def _stop_robot(self):
+        """Stop robot motion"""
+        print("[robotics.extension] Stop command")
+    
+    def _visualize_lidar(self):
+        """Visualize LiDAR data"""
+        print("[robotics.extension] Visualize LiDAR command")
+    
+    def _show_camera(self):
+        """Show camera feed"""
+        print("[robotics.extension] Show Camera Feed command")
+
+
+# Additional utility functions for the extension
+class RobotController:
+    """Utility class for robot control"""
+    
+    def __init__(self, world):
+        self._world = world
+        self._current_robot = None
+    
+    def add_robot(self, robot_usd_path, position=[0, 0, 0]):
+        """Add a robot to the simulation"""
+        try:
+            robot = self._world.scene.add(
+                Robot(
+                    prim_path="/World/CustomRobot",
+                    name="custom_robot",
+                    usd_path=robot_usd_path,
+                    position=position
+                )
+            )
+            self._current_robot = robot
+            return robot
+        except Exception as e:
+            carb.log_error(f"Failed to add robot: {e}")
+            return None
+    
+    def control_robot(self, linear_vel, angular_vel):
+        """Control the robot using differential drive"""
+        if self._current_robot:
+            # In a real implementation, this would set the robot's wheel velocities
+            # For now, we'll just log the command
+            print(f"Robot control command: linear={linear_vel}, angular={angular_vel}")
+
+
+def create_extension():
+    """Helper function to create the extension"""
+    return RoboticsExtension()
+```
+
+## Exercise 5: Running the Exercises
+
+### Running Instructions
+
+Create a script to run all exercises (`~/isaac_sim_exercises/scripts/run_all_exercises.py`):
+
+```python
+#!/usr/bin/env python3
+"""
+Script to run all Isaac Sim exercises
+"""
+
+import subprocess
+import sys
+import os
+
+def run_exercise(script_path, description):
+    """Run a single exercise"""
+    print(f"\n{'='*60}")
+    print(f"Running: {description}")
+    print(f"Script: {script_path}")
+    print(f"{'='*60}")
+    
+    try:
+        result = subprocess.run([sys.executable, script_path], 
+                              capture_output=True, text=True, timeout=120)
+        
+        if result.returncode == 0:
+            print("✓ Exercise completed successfully")
+            if result.stdout:
+                print(f"Output:\n{result.stdout[-1000:]}")  # Last 1000 chars
+        else:
+            print(f"✗ Exercise failed with return code: {result.returncode}")
+            if result.stderr:
+                print(f"Error:\n{result.stderr}")
+    
+    except subprocess.TimeoutExpired:
+        print("✗ Exercise timed out (120 seconds)")
+    except Exception as e:
+        print(f"✗ Failed to run exercise: {e}")
+
+def main():
+    """Run all exercises"""
+    print("Isaac Sim Practical Exercises")
+    print("="*60)
+    
+    exercises_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    exercises = [
+        ("setup_robot.py", "Exercise 1: Complete Robot Setup"),
+        ("sensor_integration.py", "Exercise 2: Sensor Integration"), 
+        ("navigation_exercise.py", "Exercise 3: Robot Navigation"),
+        ("advanced_sensor_exercise.py", "Exercise 4: Advanced Sensor Processing")
+    ]
+    
+    for script, description in exercises:
+        script_path = os.path.join(exercises_dir, script)
+        if os.path.exists(script_path):
+            run_exercise(script_path, description)
+        else:
+            print(f"\n⚠ Script not found: {script_path}")
+    
+    print(f"\n{'='*60}")
+    print("All exercises completed!")
+    print("="*60)
+
+if __name__ == "__main__":
+    main()
+```
+
+## Summary
+
+This practical exercise module covered:
+
+1. **Complete robot simulation**: Creating a robot with sensors in Isaac Sim
+2. **Sensor integration**: Working with cameras, LiDAR, and IMU sensors
+3. **Navigation**: Implementing path planning and obstacle avoidance
+4. **Advanced sensor processing**: Creating occupancy maps and state estimation
+5. **Extension development**: Creating custom Isaac Sim extensions
+6. **ROS 2 integration**: Connecting Isaac Sim to ROS 2 systems
+
+These exercises provide hands-on experience with Isaac Sim's robotics capabilities, from basic setup to advanced sensor processing. The exercises demonstrate:
+
+- How to create complex simulation environments
+- How to integrate various sensors and process their data
+- How to implement navigation and control algorithms
+- How to develop custom extensions for specialized robotics applications
+
+The skills learned in these exercises form the foundation for using Isaac Sim for advanced robotics research and development, particularly in areas like autonomous navigation, sensor fusion, and AI training for robotics.
+
+This completes the submodules for Week 1 of Module 3 on NVIDIA Isaac Sim.

@@ -1,0 +1,147 @@
+---
+sidebar_position: 3
+difficulty: beginner
+---
+
+# 1.3: ROS 2 Installation and Development Environment Setup
+
+## Overview
+
+This submodule provides comprehensive instructions for installing ROS 2 and setting up your development environment.
+
+## Learning Objectives
+
+By the end of this submodule, you will:
+- Install ROS 2 on your preferred operating system
+- Configure your development environment
+- Set up the ROS 2 workspace
+- Run your first ROS 2 example
+
+## Choosing Your ROS 2 Distribution
+
+ROS 2 has multiple distributions released approximately every year. The current LTS (Long Term Support) distribution is Humble Hawksbill (2022), which is recommended for production systems. Other distributions include:
+
+- **Humble Hawksbill**: LTS, supports Ubuntu 22.04, Debian 11, Windows, macOS
+- **Iron Irwini**: Regular release, supports Ubuntu 22.04
+- **Rolling Ridley**: Development branch (not for production)
+
+## Installation Prerequisites
+
+### System Requirements
+
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| OS | Ubuntu 22.04/20.04, Windows 10+, macOS 11+ | Ubuntu 22.04 LTS |
+| CPU | 4 cores | 8+ cores |
+| RAM | 8 GB | 16+ GB |
+| Storage | 50 GB free space | 100+ GB |
+
+### Ubuntu Installation
+
+1. **Set locale**:
+```bash
+locale  # check for C.UTF-8
+sudo locale-gen en_US.UTF-8
+sudo update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
+```
+
+2. **Add ROS 2 apt repository**:
+```bash
+sudo apt update && sudo apt install curl gnupg lsb-release
+curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | sudo gpg --dearmor -o /usr/share/keyrings/ros-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(source /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+```
+
+3. **Install ROS 2 packages**:
+```bash
+sudo apt update
+sudo apt install ros-humble-desktop
+sudo apt install ros-dev-tools
+```
+
+4. **Initialize rosdep**:
+```bash
+sudo rosdep init
+rosdep update
+```
+
+### Windows Installation
+
+1. **Install Chocolatey**:
+```powershell
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+```
+
+2. **Install Python and Visual Studio**:
+```powershell
+choco install python visualstudio2019buildtools visualstudio2019-workload-vctools
+```
+
+3. **Download and install ROS 2**:
+Download the Windows binary release from the ROS 2 website and extract to `C:\dev\ros2_humble`
+
+## Environment Setup
+
+### Source ROS 2
+```bash
+# Ubuntu
+source /opt/ros/humble/setup.bash
+
+# Windows
+call "C:\dev\ros2_humble\local_setup.bat"
+```
+
+### Create a Workspace
+```bash
+mkdir -p ~/ros2_ws/src
+cd ~/ros2_ws
+colcon build
+source install/setup.bash
+```
+
+## Testing Your Installation
+
+1. **Open two terminals**
+
+2. **In the first terminal**:
+```bash
+source /opt/ros/humble/setup.bash
+ros2 run demo_nodes_cpp talker
+```
+
+3. **In the second terminal**:
+```bash
+source /opt/ros/humble/setup.bash
+ros2 run demo_nodes_py listener
+```
+
+You should see messages being published by the talker and received by the listener.
+
+## Development Tools Setup
+
+### VS Code Configuration
+Create `.vscode/settings.json` in your workspace:
+```json
+{
+    "python.defaultInterpreterPath": "/opt/ros/humble/bin/python3",
+    "cmake.cmakePath": "/usr/bin/cmake",
+    "terminal.integrated.defaultProfile.linux": "bash"
+}
+```
+
+### Common ROS 2 Commands
+- `ros2 run <package_name> <executable_name>`: Run a node
+- `ros2 topic list`: List all topics
+- `ros2 node list`: List all nodes
+- `ros2 service list`: List all services
+
+## Troubleshooting Common Issues
+
+- **Command not found**: Ensure you've sourced your ROS 2 installation
+- **Permission errors**: Check your workspace permissions
+- **Python issues**: Verify your Python version and packages
+
+## Summary
+
+This submodule covered the installation of ROS 2 and setup of your development environment. You should now have a working ROS 2 installation and be able to run basic examples. The next submodule will cover practical exercises to reinforce your understanding.
