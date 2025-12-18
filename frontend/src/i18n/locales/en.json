@@ -1,0 +1,63 @@
+{
+  "translation": {
+    "button": {
+      "switchToUrdu": "اردو",
+      "switchToEnglish": "English"
+    },
+    "status": {
+      "translating": "Translating content...",
+      "translated": "Content translated to Urdu",
+      "error": "Translation failed. Please try again.",
+      "notTranslated": "Switch to Urdu to translate content"
+    },
+    "chat": {
+      "placeholder": "Ask a question about the course...",
+      "send": "Send",
+      "typing": "AI is typing...",
+      "error": "Failed to get response. Please try again."
+    },
+    "auth": {
+      "login": "Login",
+      "signup": "Sign Up",
+      "logout": "Logout",
+      "email": "Email",
+      "password": "Password",
+      "title": "Authentication"
+    },
+    "navigation": {
+      "home": "Home",
+      "courses": "Courses",
+      "profile": "Profile",
+      "bookmarks": "Bookmarks",
+      "progress": "Progress"
+    },
+    "common": {
+      "loading": "Loading...",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "close": "Close"
+    },
+    "translation": {
+      "title": "Translation",
+      "description": "Translate this content to your preferred language:",
+      "helpText": "Switch between English and Urdu to enhance your learning experience."
+    },
+    "personalization": {
+      "title": "Personalization",
+      "description": "Customize your learning experience based on your profile:",
+      "buttonText": "Adjust Learning Preferences",
+      "helpText": "Tailor content to your hardware access, experience level, and goals."
+    },
+    "floatingChat": {
+      "openPanel": "Open chat panel",
+      "closePanel": "Close chat panel",
+      "aiAssistant": "AI Assistant",
+      "chatTab": "Open chat",
+      "authTab": "Authentication",
+      "translateTab": "Translation",
+      "personalizeTab": "Personalization"
+    }
+  }
+}

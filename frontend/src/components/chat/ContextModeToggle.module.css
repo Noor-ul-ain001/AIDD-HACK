@@ -1,0 +1,278 @@
+/* ContextModeToggle.module.css */
+
+.contextModeToggle {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.toggleContainer {
+  display: flex;
+  position: relative;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+  border-radius: 16px;
+  padding: 4px;
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.05),
+    0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.toggleButton {
+  flex: 1;
+  padding: 14px 20px;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #667eea;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toggleButton:hover:not(.active) {
+  background: rgba(102, 126, 234, 0.1);
+  transform: translateY(-1px);
+}
+
+.toggleButton.active {
+  color: white;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.toggleButton:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.toggleButton:active:not(.active) {
+  transform: translateY(0);
+}
+
+.toggleIndicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: calc(50% - 4px);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  z-index: 1;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.toggleIndicator[data-mode='selective'] {
+  transform: translateX(calc(100% + 8px));
+}
+
+.modeDescription {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+  padding: 8px 12px;
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid #667eea;
+  transition: all 0.3s ease;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Add data attribute for indicator positioning */
+.toggleContainer[data-mode='full_book'] .toggleIndicator {
+  transform: translateX(0);
+}
+
+.toggleContainer[data-mode='selective'] .toggleIndicator {
+  transform: translateX(calc(100% + 8px));
+}
+
+/* Responsive Design */
+
+/* Tablets */
+@media (max-width: 768px) {
+  .contextModeToggle {
+    max-width: 350px;
+    gap: 10px;
+  }
+  
+  .toggleButton {
+    padding: 12px 16px;
+    font-size: 0.9rem;
+  }
+  
+  .modeDescription {
+    font-size: 0.85rem;
+    padding: 6px 10px;
+  }
+}
+
+/* Mobile phones */
+@media (max-width: 480px) {
+  .contextModeToggle {
+    max-width: 100%;
+  }
+  
+  .toggleContainer {
+    border-radius: 12px;
+    padding: 3px;
+  }
+  
+  .toggleButton {
+    padding: 12px 14px;
+    font-size: 0.85rem;
+    border-radius: 10px;
+  }
+  
+  .toggleIndicator {
+    top: 3px;
+    bottom: 3px;
+    border-radius: 10px;
+    width: calc(50% - 3px);
+  }
+  
+  .toggleContainer[data-mode='selective'] .toggleIndicator {
+    transform: translateX(calc(100% + 6px));
+  }
+  
+  .modeDescription {
+    font-size: 0.8rem;
+    padding: 8px;
+    min-height: 36px;
+  }
+}
+
+/* Small mobile phones */
+@media (max-width: 360px) {
+  .toggleButton {
+    padding: 10px 8px;
+    font-size: 0.8rem;
+  }
+  
+  .modeDescription {
+    font-size: 0.75rem;
+  }
+}
+
+/* Landscape mode */
+@media (max-width: 768px) and (orientation: landscape) {
+  .contextModeToggle {
+    max-width: 300px;
+    margin: 0;
+  }
+}
+
+/* High-resolution displays */
+@media (min-width: 1400px) {
+  .contextModeToggle {
+    max-width: 450px;
+  }
+  
+  .toggleButton {
+    font-size: 1rem;
+    padding: 16px 24px;
+  }
+  
+  .modeDescription {
+    font-size: 0.95rem;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .toggleContainer {
+    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    box-shadow: 
+      inset 0 2px 4px rgba(0, 0, 0, 0.2),
+      0 2px 8px rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .toggleButton {
+    color: #a0aec0;
+  }
+  
+  .toggleButton:hover:not(.active) {
+    background: rgba(102, 126, 234, 0.2);
+  }
+  
+  .toggleButton.active {
+    color: white;
+  }
+  
+  .toggleButton:focus {
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+  }
+  
+  .modeDescription {
+    color: #cbd5e0;
+    background: rgba(102, 126, 234, 0.1);
+    border-left-color: #667eea;
+  }
+  
+  .toggleIndicator {
+    background: linear-gradient(135deg, #667eea 0%, #9f7aea 100%);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .toggleButton {
+    transition: none;
+  }
+  
+  .toggleIndicator {
+    transition: none;
+  }
+  
+  .modeDescription {
+    transition: none;
+  }
+  
+  .toggleButton:hover:not(.active) {
+    transform: none;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .toggleButton.active {
+    background: #667eea;
+    color: white;
+    border: 2px solid white;
+  }
+  
+  .toggleContainer {
+    border: 2px solid #667eea;
+  }
+  
+  .modeDescription {
+    border: 2px solid #667eea;
+    background: white;
+    color: black;
+  }
+}
+
+/* Update the component to use data attribute */
+/* Add this to your component JSX: */
+
+/*
+  <div 
+    className={clsx(styles.toggleContainer)} 
+    data-mode={mode}  // Add this line
+  >
+*/
