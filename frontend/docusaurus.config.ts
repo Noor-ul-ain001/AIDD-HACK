@@ -8,15 +8,15 @@ const config: Config = {
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here
-  url: 'https://your-docusaurus-site.example.com',
+  url: 'https://aidd-hack-jwn8.vercel.app',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'noor-ana', // Usually your GitHub org/user name.
-  projectName: 'physical-ai-platform', // Usually your repo name.
+  organizationName: 'Noor-ul-ain001', // Usually your GitHub org/user name.
+  projectName: 'AIDD-HACK', // Usually your repo name.
 
   onBrokenLinks: 'warn',  // Changed from 'throw' to allow build with broken links
   onBrokenMarkdownLinks: 'warn',
@@ -54,7 +54,7 @@ const config: Config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/noor-ana/physical-ai-platform/tree/main/',
+            'https://github.com/Noor-ul-ain001/AIDD-HACK/tree/main/',
         },
         blog: false, // Disable blog for educational platform
         theme: {
@@ -100,7 +100,7 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://github.com/noor-ana/physical-ai-platform',
+          href: 'https://github.com/Noor-ul-ain001/AIDD-HACK',
           label: 'GitHub',
           position: 'right',
         },
