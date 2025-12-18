@@ -31,7 +31,8 @@
       "Bash(npx docusaurus serve:*)",
       "Bash(alembic stamp:*)",
       "Bash(cat:*)",
-      "Bash(npm start)"
+      "Bash(npm start)",
+      "Bash(git fetch:*)"
     ]
   }
 }
