@@ -1,0 +1,1014 @@
+---
+sidebar_position: 3
+difficulty: intermediate
+---
+
+# 2.3: Basic Simulation Concepts and World Building
+
+## Overview
+
+This submodule introduces fundamental concepts of robot simulation in Gazebo, including world building, model spawning, and basic simulation control. We'll explore the SDF (Simulation Description Format) and learn how to create and customize simulation environments.
+
+## Learning Objectives
+
+By the end of this submodule, you will:
+- Understand the SDF (Simulation Description Format) structure
+- Create and customize Gazebo worlds with models and objects
+- Spawn and control robots in simulation
+- Work with basic sensors in simulated environments
+- Understand simulation parameters and physics settings
+- Create launch files to automate simulation workflows
+
+## SDF (Simulation Description Format) Overview
+
+### What is SDF?
+
+SDF (Simulation Description Format) is the XML-based format used by Gazebo to describe simulation environments. It defines:
+
+- Worlds (environments)
+- Models (robots, objects)
+- Physics settings
+- Lights
+- Plugins
+
+### Basic SDF Structure
+
+```xml
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <world name="example_world">
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    
+    <model name="my_robot">
+      <pose>0 0 0.5 0 0 0</pose>
+      <link name="chassis">
+        <pose>0 0 0.1 0 0 0</pose>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>1.0 0.5 0.2</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1.0 0.5 0.2</size>
+            </box>
+          </geometry>
+        </visual>
+        <inertial>
+          <mass>10</mass>
+          <inertia>
+            <ixx>0.4</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1.25</iyy>
+            <iyz>0</iyz>
+            <izz>1.25</izz>
+          </inertia>
+        </inertial>
+      </link>
+    </model>
+  </world>
+</sdf>
+```
+
+## Creating Custom Worlds
+
+### Basic World Structure
+
+Let's build a simple world file step by step. Create `my_robot_gazebo/worlds/basic_world.sdf`:
+
+```xml
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <world name="basic_world">
+    <!-- Include standard models -->
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    
+    <!-- Configure physics -->
+    <physics name="ode" default="0" type="ode">
+      <gravity>0 0 -9.8</gravity>
+      <ode>
+        <solver>
+          <type>quick</type>
+          <iters>10</iters>
+          <sor>1.3</sor>
+        </solver>
+        <constraints>
+          <cfm>0.0</cfm>
+          <erp>0.2</erp>
+          <contact_max_correcting_vel>100.0</contact_max_correcting_vel>
+          <contact_surface_layer>0.001</contact_surface_layer>
+        </constraints>
+      </ode>
+    </physics>
+    
+    <!-- Add a simple wall -->
+    <model name="wall">
+      <static>true</static>
+      <pose>2 0 1 0 0 0</pose>
+      <link name="wall_link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.1 4.0 2.0</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.1 4.0 2.0</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+    
+    <!-- Add another wall perpendicular to the first -->
+    <model name="wall2">
+      <static>true</static>
+      <pose>-1 2 1 0 0 1.57</pose>
+      <link name="wall2_link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.1 4.0 2.0</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.1 4.0 2.0</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+    
+    <!-- Add a box that can be moved -->
+    <model name="movable_box">
+      <pose>-1 0 0.5 0 0 0</pose>
+      <link name="box_link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.5 0.5 0.5</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.5 0.5 0.5</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.5 0.5 1.0 1</ambient>
+            <diffuse>0.5 0.5 1.0 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+        <inertial>
+          <mass>2</mass>
+          <inertia>
+            <ixx>0.083</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.083</iyy>
+            <iyz>0</iyz>
+            <izz>0.083</izz>
+          </inertia>
+        </inertial>
+      </link>
+    </model>
+  </world>
+</sdf>
+```
+
+### Advanced World Features
+
+Create a more advanced world file at `my_robot_gazebo/worlds/advanced_world.sdf`:
+
+```xml
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <world name="advanced_world">
+    <!-- Include standard models -->
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    
+    <!-- Configure physics with more detailed parameters -->
+    <physics name="ode" default="0" type="ode">
+      <gravity>0 0 -9.8</gravity>
+      <ode>
+        <solver>
+          <type>quick</type>
+          <iters>100</iters>
+          <sor>1.3</sor>
+        </solver>
+        <constraints>
+          <cfm>0.0</cfm>
+          <erp>0.2</erp>
+          <contact_max_correcting_vel>100.0</contact_max_correcting_vel>
+          <contact_surface_layer>0.001</contact_surface_layer>
+        </constraints>
+      </ode>
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+    
+    <!-- Define plugins for ROS 2 integration -->
+    <plugin name="gazebo_ros_init" filename="libgazebo_ros_init.so">
+      <ros>
+        <namespace>/gazebo</namespace>
+      </ros>
+    </plugin>
+    
+    <!-- Add a custom light -->
+    <light name="custom_light" type="point">
+      <pose>3 3 8 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.8 0.8 0.8 1</specular>
+      <attenuation>
+        <range>10</range>
+        <constant>0.5</constant>
+        <linear>0.1</linear>
+        <quadratic>0.01</quadratic>
+      </attenuation>
+      <cast_shadows>true</cast_shadows>
+    </light>
+    
+    <!-- Add a cuboid obstacle -->
+    <model name="obstacle_1">
+      <static>false</static>
+      <pose>1 1 0.2 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.4 0.4 0.4</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.4 0.4 0.4</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1.0 0.0 0.0 1</ambient>
+            <diffuse>1.0 0.0 0.0 1</diffuse>
+            <specular>0.8 0.2 0.2 1</specular>
+          </material>
+        </visual>
+        <inertial>
+          <mass>1</mass>
+          <inertia>
+            <ixx>0.0133</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.0133</iyy>
+            <iyz>0</iyz>
+            <izz>0.0133</izz>
+          </inertia>
+        </inertial>
+      </link>
+    </model>
+    
+    <!-- Add a cylinder obstacle -->
+    <model name="cylinder_obstacle">
+      <static>false</static>
+      <pose>-1 -1 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.2</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <radius>0.2</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.0 1.0 0.0 1</ambient>
+            <diffuse>0.0 1.0 0.0 1</diffuse>
+            <specular>0.2 0.8 0.2 1</specular>
+          </material>
+        </visual>
+        <inertial>
+          <mass>2</mass>
+          <inertia>
+            <ixx>0.15</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.15</iyy>
+            <iyz>0</iyz>
+            <izz>0.1</izz>
+          </inertia>
+        </inertial>
+      </link>
+    </model>
+    
+    <!-- Add a simple ramp -->
+    <model name="ramp">
+      <static>true</static>
+      <pose>2 -2 0 0 0.3 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <mesh>
+              <uri>file://meshes/ramp.dae</uri>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <mesh>
+              <uri>file://meshes/ramp.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>
+```
+
+## Robot Model Integration
+
+### Creating a Simple Robot Model
+
+Create `my_robot_gazebo/models/simple_robot/model.sdf`:
+
+```xml
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <model name="simple_robot">
+    <pose>0 0 0.5 0 0 0</pose>
+    
+    <!-- Chassis -->
+    <link name="chassis">
+      <pose>0 0 0.1 0 0 0</pose>
+      <collision name="collision">
+        <geometry>
+          <box>
+            <size>0.5 0.3 0.2</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <box>
+            <size>0.5 0.3 0.2</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.0 0.8 0.8 1</ambient>
+          <diffuse>0.0 0.8 0.8 1</diffuse>
+          <specular>0.8 0.8 0.8 1</specular>
+        </material>
+      </visual>
+      <inertial>
+        <mass>5</mass>
+        <inertia>
+          <ixx>0.1</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.2</iyy>
+          <iyz>0</iyz>
+          <izz>0.25</izz>
+        </inertia>
+      </inertial>
+    </link>
+    
+    <!-- Left wheel -->
+    <link name="left_wheel">
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.1</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.1</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.2 0.2 0.2 1</diffuse>
+          <specular>0.8 0.8 0.8 1</specular>
+        </material>
+      </visual>
+      <inertial>
+        <mass>0.5</mass>
+        <inertia>
+          <ixx>0.001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.001</iyy>
+          <iyz>0</iyz>
+          <izz>0.002</izz>
+        </inertia>
+      </inertial>
+    </link>
+    
+    <!-- Right wheel -->
+    <link name="right_wheel">
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.1</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.1</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.2 0.2 0.2 1</diffuse>
+          <specular>0.8 0.8 0.8 1</specular>
+        </material>
+      </visual>
+      <inertial>
+        <mass>0.5</mass>
+        <inertia>
+          <ixx>0.001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.001</iyy>
+          <iyz>0</iyz>
+          <izz>0.002</izz>
+        </inertia>
+      </inertial>
+    </link>
+    
+    <!-- Joints connecting wheels to chassis -->
+    <joint name="left_wheel_joint" type="continuous">
+      <parent>chassis</parent>
+      <child>left_wheel</child>
+      <pose>0.15 0.2 0 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+      </axis>
+    </joint>
+    
+    <joint name="right_wheel_joint" type="continuous">
+      <parent>chassis</parent>
+      <child>right_wheel</child>
+      <pose>0.15 -0.2 0 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+      </axis>
+    </joint>
+  </model>
+</sdf>
+```
+
+### Model Configuration File
+
+Create `my_robot_gazebo/models/simple_robot/model.config`:
+
+```xml
+<?xml version="1.0"?>
+<model>
+  <name>Simple Robot</name>
+  <version>1.0</version>
+  <sdf version="1.7">model.sdf</sdf>
+  
+  <author>
+    <name>Your Name</name>
+    <email>your.email@example.com</email>
+  </author>
+  
+  <description>
+    A simple robot model for simulation.
+  </description>
+</model>
+```
+
+## Spawning Robots Programmatically
+
+### ROS 2 Node for Robot Spawning
+
+Create `my_robot_gazebo/my_robot_gazebo/spawn_robot.py`:
+
+```python
+#!/usr/bin/env python3
+import rclpy
+from rclpy.node import Node
+from gazebo_msgs.srv import SpawnEntity
+from geometry_msgs.msg import Pose
+import os
+from ament_index_python.packages import get_package_share_directory
+
+class RobotSpawner(Node):
+    def __init__(self):
+        super().__init__('robot_spawner')
+        
+        # Create a service client for spawning entities
+        self.spawn_cli = self.create_client(SpawnEntity, '/spawn_entity')
+        
+        # Wait for the service to be available
+        while not self.spawn_cli.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Service /spawn_entity not available, waiting again...')
+        
+        self.spawn_robot()
+
+    def spawn_robot(self):
+        # Load the robot model from file
+        sdf_file_path = os.path.join(
+            get_package_share_directory('my_robot_gazebo'),
+            'models', 'simple_robot', 'model.sdf'
+        )
+        
+        with open(sdf_file_path, 'r') as sdf_file:
+            robot_model_xml = sdf_file.read()
+        
+        # Create the request
+        request = SpawnEntity.Request()
+        request.name = "my_robot"
+        request.xml = robot_model_xml
+        request.robot_namespace = ""
+        
+        # Set initial pose
+        initial_pose = Pose()
+        initial_pose.position.x = 0.0
+        initial_pose.position.y = 0.0
+        initial_pose.position.z = 0.5
+        initial_pose.orientation.x = 0.0
+        initial_pose.orientation.y = 0.0
+        initial_pose.orientation.z = 0.0
+        initial_pose.orientation.w = 1.0
+        request.initial_pose = initial_pose
+        
+        # Call the service
+        future = self.spawn_cli.call_async(request)
+        self.get_logger().info('Spawning robot model...')
+        
+        # Wait for response
+        rclpy.spin_until_future_complete(self, future)
+        
+        if future.result() is not None:
+            response = future.result()
+            if response.success:
+                self.get_logger().info(f'Successfully spawned robot: {response.status_message}')
+            else:
+                self.get_logger().error(f'Failed to spawn robot: {response.status_message}')
+        else:
+            self.get_logger().error('Service call failed')
+
+def main(args=None):
+    rclpy.init(args=args)
+    robot_spawner = RobotSpawner()
+    
+    try:
+        rclpy.spin(robot_spawner)
+    except KeyboardInterrupt:
+        robot_spawner.get_logger().info('Shutting down robot spawner...')
+    finally:
+        robot_spawner.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+## Working with Sensors in Gazebo
+
+### Robot Model with Sensors
+
+Create `my_robot_gazebo/models/sensor_robot/model.sdf` with sensors:
+
+```xml
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <model name="sensor_robot">
+    <pose>0 0 0.5 0 0 0</pose>
+    
+    <!-- Chassis with sensors -->
+    <link name="chassis">
+      <pose>0 0 0.1 0 0 0</pose>
+      <collision name="collision">
+        <geometry>
+          <box>
+            <size>0.5 0.3 0.2</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <box>
+            <size>0.5 0.3 0.2</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.0 0.8 0.8 1</ambient>
+          <diffuse>0.0 0.8 0.8 1</diffuse>
+          <specular>0.8 0.8 0.8 1</specular>
+        </material>
+      </visual>
+      <inertial>
+        <mass>5</mass>
+        <inertia>
+          <ixx>0.1</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.2</iyy>
+          <iyz>0</iyz>
+          <izz>0.25</izz>
+        </inertia>
+      </inertial>
+      
+      <!-- Camera sensor -->
+      <sensor name="camera" type="camera">
+        <pose>0.2 0 0.1 0 0 0</pose>
+        <camera name="head">
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>10</far>
+          </clip>
+        </camera>
+        <always_on>1</always_on>
+        <update_rate>30</update_rate>
+        <visualize>true</visualize>
+      </sensor>
+      
+      <!-- Laser scanner -->
+      <sensor name="laser" type="ray">
+        <pose>0.2 0 0.1 0 0 0</pose>
+        <ray>
+          <scan>
+            <horizontal>
+              <samples>360</samples>
+              <resolution>1</resolution>
+              <min_angle>-1.57</min_angle>
+              <max_angle>1.57</max_angle>
+            </horizontal>
+          </scan>
+          <range>
+            <min>0.1</min>
+            <max>10.0</max>
+            <resolution>0.01</resolution>
+          </range>
+        </ray>
+        <always_on>1</always_on>
+        <update_rate>10</update_rate>
+        <visualize>true</visualize>
+      </sensor>
+      
+      <!-- IMU sensor -->
+      <sensor name="imu_sensor" type="imu">
+        <pose>0 0 0.1 0 0 0</pose>
+        <always_on>1</always_on>
+        <update_rate>50</update_rate>
+        <visualize>false</visualize>
+      </sensor>
+    </link>
+    
+    <!-- Left wheel -->
+    <link name="left_wheel">
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.1</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.1</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.2 0.2 0.2 1</diffuse>
+          <specular>0.8 0.8 0.8 1</specular>
+        </material>
+      </visual>
+      <inertial>
+        <mass>0.5</mass>
+        <inertia>
+          <ixx>0.001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.001</iyy>
+          <iyz>0</iyz>
+          <izz>0.002</izz>
+        </inertia>
+      </inertial>
+    </link>
+    
+    <!-- Right wheel -->
+    <link name="right_wheel">
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.1</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.1</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.2 0.2 0.2 1</diffuse>
+          <specular>0.8 0.8 0.8 1</specular>
+        </material>
+      </visual>
+      <inertial>
+        <mass>0.5</mass>
+        <inertia>
+          <ixx>0.001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.001</iyy>
+          <iyz>0</iyz>
+          <izz>0.002</izz>
+        </inertia>
+      </inertial>
+    </link>
+    
+    <!-- Joints -->
+    <joint name="left_wheel_joint" type="continuous">
+      <parent>chassis</parent>
+      <child>left_wheel</child>
+      <pose>0.15 0.2 0 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+      </axis>
+    </joint>
+    
+    <joint name="right_wheel_joint" type="continuous">
+      <parent>chassis</parent>
+      <child>right_wheel</child>
+      <pose>0.15 -0.2 0 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+      </axis>
+    </joint>
+  </model>
+</sdf>
+```
+
+## Launch Files for Simulation
+
+### Basic Simulation Launch File
+
+Create `my_robot_gazebo/launch/basic_simulation.launch.py`:
+
+```python
+import os
+from launch import LaunchDescription
+from launch.actions import IncludeLaunchDescription, ExecuteProcess, RegisterEventHandler
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
+from launch.event_handlers import OnProcessExit
+from ament_index_python.packages import get_package_share_directory
+
+
+def generate_launch_description():
+    # Get the package directory
+    pkg_share = get_package_share_directory('my_robot_gazebo')
+    
+    # World file path
+    world_file = os.path.join(pkg_share, 'worlds', 'basic_world.sdf')
+    
+    # Launch Gazebo with the world
+    gazebo = ExecuteProcess(
+        cmd=['gazebo', '--verbose', world_file, 
+             '-s', 'libgazebo_ros_init.so',
+             '-s', 'libgazebo_ros_factory.so'],
+        output='screen'
+    )
+    
+    # Robot State Publisher for URDF
+    urdf_file = os.path.join(pkg_share, 'urdf', 'my_robot.urdf')
+    robot_state_publisher = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        name='robot_state_publisher',
+        output='screen',
+        parameters=[{'use_sim_time': True}]
+    )
+    
+    # Static transform publisher for base footprint
+    static_tf_publisher = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='static_tf_publisher',
+        output='screen',
+        arguments=['0', '0', '0', '0', '0', '0', 'base_footprint', 'base_link']
+    )
+    
+    # Joint State Publisher
+    joint_state_publisher = Node(
+        package='joint_state_publisher',
+        executable='joint_state_publisher',
+        name='joint_state_publisher',
+        parameters=[{'use_sim_time': True}],
+        remappings=[('/robot_description', '/robot_description')]
+    )
+    
+    return LaunchDescription([
+        gazebo,
+        robot_state_publisher,
+        static_tf_publisher,
+        joint_state_publisher,
+    ])
+```
+
+### Advanced Simulation Launch File
+
+Create `my_robot_gazebo/launch/advanced_simulation.launch.py`:
+
+```python
+import os
+from launch import LaunchDescription
+from launch.actions import IncludeLaunchDescription, ExecuteProcess
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
+from ament_index_python.packages import get_package_share_directory
+
+
+def generate_launch_description():
+    # Get the package directory
+    pkg_share = get_package_share_directory('my_robot_gazebo')
+    
+    # Advanced world file path
+    world_file = os.path.join(pkg_share, 'worlds', 'advanced_world.sdf')
+    
+    # Launch Gazebo with the world
+    gazebo = ExecuteProcess(
+        cmd=['gazebo', '--verbose', world_file, 
+             '-s', 'libgazebo_ros_init.so',
+             '-s', 'libgazebo_ros_factory.so'],
+        output='screen'
+    )
+    
+    # Robot State Publisher for URDF
+    robot_state_publisher = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        name='robot_state_publisher',
+        output='screen',
+        parameters=[{'use_sim_time': True}]
+    )
+    
+    # Launch controller manager
+    controller_manager = Node(
+        package='controller_manager',
+        executable='ros2_control_node',
+        parameters=[
+            os.path.join(pkg_share, 'config', 'my_robot_controllers.yaml'),
+            {'use_sim_time': True}
+        ],
+        output='screen'
+    )
+    
+    # Spawn controllers
+    spawn_joint_state_controller = ExecuteProcess(
+        cmd=['ros2', 'control', 'load_controller', '--set-state', 'start',
+             'joint_state_broadcaster'],
+        output='screen'
+    )
+    
+    spawn_velocity_controller = ExecuteProcess(
+        cmd=['ros2', 'control', 'load_controller', '--set-state', 'start',
+             'diff_drive_controller'],
+        output='screen'
+    )
+    
+    return LaunchDescription([
+        gazebo,
+        robot_state_publisher,
+        controller_manager,
+        spawn_joint_state_controller,
+        spawn_velocity_controller,
+    ])
+```
+
+## Physics Configuration
+
+### Understanding Physics Parameters
+
+Physics configuration in Gazebo affects simulation accuracy and performance:
+
+```xml
+<physics name="ode" default="0" type="ode">
+  <gravity>0 0 -9.8</gravity>
+  
+  <!-- Solver settings -->
+  <ode>
+    <solver>
+      <type>quick</type>  <!-- quick or world -->
+      <iters>100</iters>  <!-- Number of iterations for error correction -->
+      <sor>1.3</sor>      <!-- Successive Over Relaxation parameter -->
+    </solver>
+    
+    <!-- Constraint settings -->
+    <constraints>
+      <cfm>0.0</cfm>  <!-- Constraint Force Mixing -->
+      <erp>0.2</erp>  <!-- Error Reduction Parameter -->
+      <!-- Max velocity for contact correction -->
+      <contact_max_correcting_vel>100.0</contact_max_correcting_vel>
+      <!-- Contact layer depth -->
+      <contact_surface_layer>0.001</contact_surface_layer>
+    </constraints>
+  </ode>
+  
+  <!-- Time stepping settings -->
+  <max_step_size>0.001</max_step_size>        <!-- Simulation time step -->
+  <real_time_factor>1</real_time_factor>      <!-- Simulation speed relative to real time -->
+  <real_time_update_rate>1000</real_time_update_rate>  <!-- Update rate in Hz -->
+</physics>
+```
+
+### Performance vs. Accuracy Trade-offs
+
+- **Smaller step size**: Higher accuracy but slower simulation
+- **More solver iterations**: Higher accuracy but slower simulation
+- **Higher real-time factor**: Faster simulation but potentially less stable
+- **Higher update rate**: More responsive but more computationally expensive
+
+## Summary
+
+This submodule covered the fundamental concepts of simulation in Gazebo:
+
+- SDF (Simulation Description Format) structure and components
+- Creating custom worlds with objects, obstacles, and environments
+- Building robot models with links, joints, and sensors
+- Spawning robots programmatically using ROS 2 services
+- Working with various sensor types in simulation
+- Creating launch files to automate simulation workflows
+- Physics configuration and performance considerations
+
+Understanding these basic concepts is crucial for creating effective and realistic robot simulations. In the next submodule, we'll explore controlling robots in simulation and working with sensor data.

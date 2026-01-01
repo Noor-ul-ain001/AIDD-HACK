@@ -1,0 +1,254 @@
+---
+
+sidebar_position: 1
+
+---
+
+
+
+# 2.1: Understanding ROS 2 Nodes
+
+## Overview
+
+This submodule provides an in-depth understanding of ROS 2 nodes, which are the fundamental building blocks of any ROS application. We'll explore how to create, manage, and organize nodes effectively.
+
+## Learning Objectives
+
+By the end of this submodule, you will:
+- Understand what a node is and its role in ROS 2
+- Create nodes in both Python and C++
+- Implement proper node lifecycle management
+- Understand node parameters and configuration
+- Use node composition for efficient applications
+
+## What is a Node?
+
+In ROS 2, a **node** is a process that performs computation. Nodes are the fundamental unit of computation in ROS 2 and are designed to be modular and reusable. Multiple nodes are usually combined together to form a complete ROS application.
+
+### Key Characteristics of Nodes:
+
+1. **Modularity**: Nodes encapsulate specific functionality
+2. **Communication**: Nodes communicate with each other using topics, services, and actions
+3. **Independence**: Nodes can be run independently
+4. **Configurability**: Nodes can be configured using parameters
+
+## Creating Nodes in Python
+
+### Basic Node Structure
+
+```python
+import rclpy
+from rclpy.node import Node
+
+class MyNode(Node):
+    def __init__(self):
+        super().__init__('my_node_name')
+        # Node initialization code goes here
+        self.get_logger().info('Node initialized')
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = MyNode()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### Node Naming and Uniqueness
+
+ROS 2 automatically handles node name conflicts by adding a numeric suffix if needed:
+
+```python
+# If another node named 'my_node' exists,
+# this node will be renamed to something like 'my_node_1'
+node = MyNode()  # Uses default name from class
+node = MyNode(node_name='my_custom_name')  # Or specify custom name
+```
+
+## Creating Nodes in C++
+
+```cpp
+#include <rclcpp/rclcpp.hpp>
+
+class MyNode : public rclcpp::Node
+{
+public:
+    MyNode() : Node("my_node_name")
+    {
+        RCLCPP_INFO(this->get_logger(), "Node initialized");
+    }
+};
+
+int main(int argc, char * argv[])
+{
+    rclcpp::init(argc, argv);
+    rclcpp::spin(std::make_shared<MyNode>());
+    rclcpp::shutdown();
+    return 0;
+}
+```
+
+## Node Parameters
+
+Nodes can accept parameters to configure their behavior:
+
+```python
+import rclpy
+from rclpy.node import Node
+
+class ParameterNode(Node):
+    def __init__(self):
+        super().__init__('parameter_node')
+        
+        # Declare parameters with default values
+        self.declare_parameter('my_parameter', 'default_value')
+        self.declare_parameter('count_threshold', 10)
+        self.declare_parameter('frequency', 1.0)
+        
+        # Get parameter values
+        self.my_param = self.get_parameter('my_parameter').value
+        self.threshold = self.get_parameter('count_threshold').value
+        self.freq = self.get_parameter('frequency').value
+        
+        self.counter = 0
+
+def main(args=None):
+    rclpy.init(args=args)
+    
+    # Pass parameters when creating node
+    node = ParameterNode()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+```
+
+### Setting Parameters at Runtime
+
+```bash
+# Command line
+ros2 run my_package my_node --ros-args -p my_parameter:=new_value -p frequency:=2.0
+
+# In launch file
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+def generate_launch_description():
+    return LaunchDescription([
+        Node(
+            package='my_package',
+            executable='my_node',
+            parameters=[
+                {'my_parameter': 'new_value'},
+                {'frequency': 2.0}
+            ]
+        )
+    ])
+```
+
+## Node Lifecycle Management
+
+ROS 2 provides a lifecycle system for more complex node management:
+
+```python
+import rclpy
+from rclpy.lifecycle import LifecycleNode, LifecycleState, TransitionCallbackReturn
+from rclpy.lifecycle import Node as ROS2Node
+
+class LifecycleManagedNode(LifecycleNode):
+    def __init__(self):
+        super().__init__('lifecycle_node')
+        self.get_logger().info('Lifecycle node created')
+
+    def on_configure(self, state: LifecycleState) -> TransitionCallbackReturn:
+        self.get_logger().info('Configuring node')
+        # Setup publishers, subscribers, etc.
+        return TransitionCallbackReturn.SUCCESS
+
+    def on_activate(self, state: LifecycleState) -> TransitionCallbackReturn:
+        self.get_logger().info('Activating node')
+        # Activate publishers, subscribers, etc.
+        return TransitionCallbackReturn.SUCCESS
+
+    def on_deactivate(self, state: LifecycleState) -> TransitionCallbackReturn:
+        self.get_logger().info('Deactivating node')
+        # Deactivate publishers, subscribers, etc.
+        return TransitionCallbackReturn.SUCCESS
+
+    def on_cleanup(self, state: LifecycleState) -> TransitionCallbackReturn:
+        self.get_logger().info('Cleaning up node')
+        # Clean up resources
+        return TransitionCallbackReturn.SUCCESS
+```
+
+## Node Composition
+
+Node composition allows multiple nodes to run within the same process:
+
+```python
+import rclpy
+from rclpy.node import Node
+from rclpy.executors import SingleThreadedExecutor
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from std_msgs.msg import String
+
+class PublisherNode(Node):
+    def __init__(self):
+        super().__init__('publisher_node')
+        self.publisher = self.create_publisher(String, 'composed_topic', 10)
+        self.timer = self.create_timer(1.0, self.timer_callback)
+        self.counter = 0
+
+    def timer_callback(self):
+        msg = String()
+        msg.data = f'Composed message {self.counter}'
+        self.publisher.publish(msg)
+        self.counter += 1
+
+class SubscriberNode(Node):
+    def __init__(self):
+        super().__init__('subscriber_node')
+        self.subscription = self.create_subscription(
+            String,
+            'composed_topic',
+            self.subscriber_callback,
+            10
+        )
+
+    def subscriber_callback(self, msg):
+        self.get_logger().info(f'Received: {msg.data}')
+
+def main(args=None):
+    rclpy.init(args=args)
+    
+    # Create nodes
+    pub_node = PublisherNode()
+    sub_node = SubscriberNode()
+    
+    # Create executor and add nodes
+    executor = SingleThreadedExecutor()
+    executor.add_node(pub_node)
+    executor.add_node(sub_node)
+    
+    try:
+        executor.spin()
+    finally:
+        executor.shutdown()
+        pub_node.destroy_node()
+        sub_node.destroy_node()
+        rclpy.shutdown()
+```
+
+## Best Practices
+
+1. **Node Design**: Keep nodes focused on a single responsibility
+2. **Resource Management**: Always clean up resources in the destroy callback
+3. **Error Handling**: Implement proper error handling and logging
+4. **Parameters**: Use parameters for configurable aspects of your node
+5. **Documentation**: Document your node's purpose, parameters, and interfaces
+
+## Summary
+
+This submodule covered the fundamentals of ROS 2 nodes including creation, parameter handling, lifecycle management, and composition. In the next submodule, we'll dive into topics, which are the primary communication mechanism between nodes.

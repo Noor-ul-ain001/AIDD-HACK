@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(findstr:*)",
+      "Bash(python -m uvicorn:*)",
+      "Bash(timeout:*)",
+      "Bash(ping:*)",
+      "Bash(curl:*)",
+      "Bash(dir:*)",
+      "Bash(alembic current:*)",
+      "Bash(alembic upgrade:*)",
+      "Bash(pip install:*)",
+      "Bash(python -c:*)",
+      "Bash(python:*)",
+      "Bash(npm run build:*)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote add:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git push:*)",
+      "Bash(vercel --version:*)",
+      "Bash(vercel whoami:*)",
+      "Bash(vercel --token A85SBsmqNfhW9N2VtvtXhtaf --yes --prod)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(netstat:*)",
+      "Bash(npm run swizzle:*)",
+      "Bash(npm run write-translations:*)",
+      "Bash(npm run serve:*)",
+      "Bash(npx docusaurus serve:*)",
+      "Bash(alembic stamp:*)",
+      "Bash(cat:*)",
+      "Bash(npm start)",
+      "Bash(git fetch:*)",
+      "Bash(git stash:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git checkout:*)"
+    ]
+  }
+}

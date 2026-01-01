@@ -1,0 +1,1011 @@
+---
+sidebar_position: 4
+difficulty: beginner
+---
+
+# 3.4: Practical Exercises - Communication Patterns Integration
+
+## Overview
+
+This submodule provides hands-on exercises to integrate and compare all three communication patterns (topics, services, actions) in a comprehensive robotic system. You'll build a complete scenario that demonstrates when and how to use each pattern appropriately.
+
+## Learning Objectives
+
+By the end of this submodule, you will:
+- Design a complete robotic system using all three communication patterns appropriately
+- Implement topic-based sensor streaming
+- Create service-based configuration and query systems
+- Build action-based goal-oriented task execution
+- Compare performance characteristics of different patterns
+- Debug and optimize communication between patterns
+
+## Exercise 1: Complete Robotic System Design
+
+### Objective
+Design a complete robot system that uses topics, services, and actions appropriately in a coordinated way.
+
+### System Architecture
+
+We'll create a robot navigation system with:
+- **Topics**: Sensor data, robot state, system status
+- **Services**: Configuration, calibration, emergency stop
+- **Actions**: Navigation to waypoints, manipulation tasks
+
+### Step 1: Create the Package
+```bash
+cd ~/ros2_ws/src
+ros2 pkg create --build-type ament_python communication_exercises
+```
+
+### Step 2: Define Custom Messages and Actions
+
+Create a file `msg/RobotStatus.msg`:
+```
+# RobotStatus.msg
+std_msgs/Header header
+float32 battery_level
+bool is_charging
+string status_text
+int32 error_code
+```
+
+Create a file `action/MoveToLocation.action`:
+```
+# MoveToLocation.action
+string location_name
+float32 target_x
+float32 target_y
+float32 target_theta
+---
+bool success
+string message
+int32 error_code
+---
+float32 current_x
+float32 current_y
+float32 distance_remaining
+string status
+```
+
+### Step 3: Update package.xml
+```xml
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>communication_exercises</name>
+  <version>0.1.0</version>
+  <description>Communication pattern exercises</description>
+  <maintainer email="user@example.com">User</maintainer>
+  <license>Apache-2.0</license>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>example_interfaces</depend>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+  <build_depend>rosidl_default_generators</build_depend>
+  <exec_depend>rosidl_default_runtime</exec_depend>
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
+```
+
+### Step 4: Update setup.py
+```python
+from setuptools import setup
+from glob import glob
+import os
+
+package_name = 'communication_exercises'
+
+setup(
+    name=package_name,
+    version='0.1.0',
+    packages=[package_name],
+    data_files=[
+        ('share/ament_index/resource_index/packages',
+            ['resource/' + package_name]),
+        ('share/' + package_name, ['package.xml']),
+    ],
+    install_requires=['setuptools'],
+    zip_safe=True,
+    maintainer='User',
+    maintainer_email='user@example.com',
+    description='Communication pattern exercises',
+    license='Apache-2.0',
+    tests_require=['pytest'],
+    entry_points={
+        'console_scripts': [
+            'sensor_publisher = communication_exercises.sensor_publisher:main',
+            'service_server = communication_exercises.service_server:main',
+            'action_server = communication_exercises.action_server:main',
+            'system_monitor = communication_exercises.system_monitor:main',
+        ],
+    },
+)
+```
+
+## Exercise 2: Sensor Publisher (Topics)
+
+### Objective
+Create a sensor publisher that simulates robot sensors using topics for continuous data streaming.
+
+### Implementation
+
+Create `communication_exercises/communication_exercises/sensor_publisher.py`:
+```python
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import LaserScan, Imu
+from geometry_msgs.msg import Twist
+from std_msgs.msg import Float32
+from communication_exercises.msg import RobotStatus
+import random
+import math
+
+class SensorPublisher(Node):
+    def __init__(self):
+        super().__init__('sensor_publisher')
+        
+        # Topic publishers for continuous sensor data
+        self.laser_pub = self.create_publisher(LaserScan, 'scan', 10)
+        self.imu_pub = self.create_publisher(Imu, 'imu/data', 10)
+        self.odom_pub = self.create_publisher(Float32, 'odometry', 10)
+        self.status_pub = self.create_publisher(RobotStatus, 'robot_status', 10)
+        
+        # Timer for publishing sensor data (10 Hz)
+        self.timer = self.create_timer(0.1, self.publish_sensors)
+        
+        # Robot state
+        self.position_x = 0.0
+        self.position_y = 0.0
+        self.battery_level = 100.0
+        
+        self.get_logger().info('Sensor publisher started')
+
+    def publish_sensors(self):
+        # Publish laser scan
+        laser_msg = LaserScan()
+        laser_msg.header.stamp = self.get_clock().now().to_msg()
+        laser_msg.header.frame_id = 'laser_frame'
+        laser_msg.angle_min = -math.pi / 2
+        laser_msg.angle_max = math.pi / 2
+        laser_msg.angle_increment = math.pi / 180  # 1 degree
+        laser_msg.time_increment = 0.0
+        laser_msg.scan_time = 0.1
+        laser_msg.range_min = 0.1
+        laser_msg.range_max = 10.0
+        
+        # Generate simulated laser ranges
+        num_ranges = int((laser_msg.angle_max - laser_msg.angle_min) / laser_msg.angle_increment) + 1
+        laser_msg.ranges = [random.uniform(0.5, 5.0) for _ in range(num_ranges)]
+        
+        self.laser_pub.publish(laser_msg)
+        
+        # Publish IMU data
+        imu_msg = Imu()
+        imu_msg.header.stamp = self.get_clock().now().to_msg()
+        imu_msg.header.frame_id = 'imu_frame'
+        
+        # Simulate slight movement
+        imu_msg.linear_acceleration.x = random.uniform(-0.1, 0.1)
+        imu_msg.linear_acceleration.y = random.uniform(-0.1, 0.1)
+        imu_msg.linear_acceleration.z = 9.8 + random.uniform(-0.1, 0.1)
+        
+        self.imu_pub.publish(imu_msg)
+        
+        # Publish odometry
+        odom_msg = Float32()
+        self.position_x += random.uniform(-0.05, 0.05)
+        self.position_y += random.uniform(-0.05, 0.05)
+        odom_msg.data = math.sqrt(self.position_x**2 + self.position_y**2)
+        
+        self.odom_pub.publish(odom_msg)
+        
+        # Publish robot status
+        status_msg = RobotStatus()
+        status_msg.header.stamp = self.get_clock().now().to_msg()
+        
+        # Simulate battery drain
+        self.battery_level -= 0.01
+        if self.battery_level < 0:
+            self.battery_level = 100.0  # Cycle for demo
+            
+        status_msg.battery_level = self.battery_level
+        status_msg.is_charging = self.battery_level > 95.0
+        status_msg.status_text = "Operational" if self.battery_level > 20 else "Low Battery"
+        status_msg.error_code = 0
+        
+        self.status_pub.publish(status_msg)
+        
+        self.get_logger().debug(f'Sensors published - Battery: {self.battery_level:.2f}%')
+
+def main(args=None):
+    rclpy.init(args=args)
+    sensor_publisher = SensorPublisher()
+    
+    try:
+        rclpy.spin(sensor_publisher)
+    except KeyboardInterrupt:
+        sensor_publisher.get_logger().info('Shutting down sensor publisher...')
+    finally:
+        sensor_publisher.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+## Exercise 3: Service Server (Services)
+
+### Objective
+Create a service server for configuration and emergency operations.
+
+### Implementation
+
+Create `communication_exercises/communication_exercises/service_server.py`:
+```python
+import rclpy
+from rclpy.node import Node
+from std_srvs.srv import SetBool, Trigger
+from communication_exercises.srv import SetConfiguration  # You'll need to define this
+from geometry_msgs.msg import Twist
+
+class ServiceServer(Node):
+    def __init__(self):
+        super().__init__('service_server')
+        
+        # Service servers
+        self.emergency_stop_srv = self.create_service(
+            SetBool, 'emergency_stop', self.emergency_stop_callback)
+        self.calibrate_srv = self.create_service(
+            Trigger, 'calibrate_sensors', self.calibrate_callback)
+        self.config_srv = self.create_service(
+            SetConfiguration, 'set_configuration', self.config_callback)
+        
+        # Publisher for velocity commands (to implement emergency stop)
+        self.cmd_pub = self.create_publisher(Twist, 'cmd_vel', 10)
+        
+        # Robot configuration parameters
+        self.max_velocity = 1.0
+        self.safety_distance = 1.0
+        
+        self.get_logger().info('Service server started')
+
+    def emergency_stop_callback(self, request, response):
+        self.get_logger().info(f'Emergency stop requested: {request.data}')
+        
+        if request.data:  # Stop requested
+            # Publish zero velocity to stop the robot
+            stop_msg = Twist()
+            stop_msg.linear.x = 0.0
+            stop_msg.angular.z = 0.0
+            self.cmd_pub.publish(stop_msg)
+            response.success = True
+            response.message = "Emergency stop activated"
+            self.get_logger().warn('EMERGENCY STOP ACTIVATED')
+        else:  # Resume requested
+            response.success = True
+            response.message = "Robot can resume operation"
+            self.get_logger().info('Emergency stop deactivated')
+        
+        return response
+
+    def calibrate_callback(self, request, response):
+        self.get_logger().info('Starting sensor calibration...')
+        
+        # Simulate calibration process
+        try:
+            # In a real system, this might involve:
+            # - Taking sensor readings in known conditions
+            # - Adjusting internal parameters
+            # - Validating sensor operation
+            
+            # Simulate calibration process
+            import time
+            time.sleep(2)  # Simulate 2 seconds of calibration
+            
+            response.success = True
+            response.message = "Calibration completed successfully"
+            self.get_logger().info('Calibration completed')
+            
+        except Exception as e:
+            response.success = False
+            response.message = f"Calibration failed: {str(e)}"
+            self.get_logger().error(f'Calibration error: {e}')
+        
+        return response
+
+    def config_callback(self, request, response):
+        self.get_logger().info(f'Configuration request: {request.config_name} = {request.config_value}')
+        
+        # Process configuration changes
+        try:
+            if request.config_name == "max_velocity":
+                new_value = float(request.config_value)
+                if 0.0 < new_value <= 5.0:  # Validate range
+                    self.max_velocity = new_value
+                    response.success = True
+                    response.message = f"Max velocity set to {new_value}"
+                else:
+                    response.success = False
+                    response.message = f"Invalid max velocity value: {new_value}. Must be 0.0 < value <= 5.0"
+                    
+            elif request.config_name == "safety_distance":
+                new_value = float(request.config_value)
+                if 0.1 <= new_value <= 5.0:  # Validate range
+                    self.safety_distance = new_value
+                    response.success = True
+                    response.message = f"Safety distance set to {new_value}"
+                else:
+                    response.success = False
+                    response.message = f"Invalid safety distance value: {new_value}. Must be 0.1 <= value <= 5.0"
+            else:
+                response.success = False
+                response.message = f"Unknown configuration parameter: {request.config_name}"
+        
+        except ValueError:
+            response.success = False
+            response.message = f"Invalid value type for {request.config_name}: {request.config_value}"
+        except Exception as e:
+            response.success = False
+            response.message = f"Configuration error: {str(e)}"
+            self.get_logger().error(f'Config error: {e}')
+        
+        if response.success:
+            self.get_logger().info(f'Configuration updated: {response.message}')
+        else:
+            self.get_logger().warn(f'Configuration failed: {response.message}')
+        
+        return response
+
+def main(args=None):
+    rclpy.init(args=args)
+    service_server = ServiceServer()
+    
+    try:
+        rclpy.spin(service_server)
+    except KeyboardInterrupt:
+        service_server.get_logger().info('Shutting down service server...')
+    finally:
+        service_server.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+## Exercise 4: Action Server (Actions)
+
+### Objective
+Create an action server for long-running navigation tasks.
+
+### Implementation
+
+Create `communication_exercises/communication_exercises/action_server.py`:
+```python
+import time
+import math
+import rclpy
+from rclpy.action import ActionServer, CancelResponse, GoalResponse
+from rclpy.node import Node
+from communication_exercises.action import MoveToLocation
+from geometry_msgs.msg import Twist
+
+class ActionServerNode(Node):
+    def __init__(self):
+        super().__init__('action_server')
+        
+        # Action server
+        self._action_server = ActionServer(
+            self,
+            MoveToLocation,
+            'move_to_location',
+            execute_callback=self.execute_callback,
+            goal_callback=self.goal_callback,
+            cancel_callback=self.cancel_callback)
+        
+        # Publisher for velocity commands
+        self.cmd_pub = self.create_publisher(Twist, 'cmd_vel', 10)
+        
+        # Robot state simulation
+        self.current_x = 0.0
+        self.current_y = 0.0
+        self.is_moving = False
+        
+        self.get_logger().info('Action server started')
+
+    def goal_callback(self, goal_request):
+        self.get_logger().info(f'Received navigation goal: {goal_request.location_name}')
+        
+        # Validate goal parameters
+        if (abs(goal_request.target_x) > 100.0 or 
+            abs(goal_request.target_y) > 100.0):
+            self.get_logger().warn('Goal coordinates out of bounds')
+            return GoalResponse.REJECT
+        
+        self.get_logger().info('Accepting navigation goal')
+        return GoalResponse.ACCEPT
+
+    def cancel_callback(self, goal_handle):
+        self.get_logger().info('Received navigation cancel request')
+        return CancelResponse.ACCEPT
+
+    def execute_callback(self, goal_handle):
+        self.get_logger().info(f'Executing navigation to {goal_handle.request.location_name}')
+        
+        # Initialize feedback and result
+        feedback_msg = MoveToLocation.Feedback()
+        result = MoveToLocation.Result()
+        
+        # Store original target to calculate distance
+        target_x = goal_handle.request.target_x
+        target_y = goal_handle.request.target_y
+        start_x = self.current_x
+        start_y = self.current_y
+        
+        # Calculate total distance for percentage calculation
+        total_distance = math.sqrt((target_x - start_x)**2 + (target_y - start_y)**2)
+        
+        # Navigation loop
+        step = 0
+        max_steps = 100  # Max steps to prevent infinite loops
+        
+        while step < max_steps:
+            # Check for cancellation
+            if goal_handle.is_cancel_requested:
+                goal_handle.canceled()
+                result.success = False
+                result.message = "Navigation canceled by user"
+                result.error_code = 1
+                
+                # Stop the robot
+                stop_msg = Twist()
+                stop_msg.linear.x = 0.0
+                stop_msg.angular.z = 0.0
+                self.cmd_pub.publish(stop_msg)
+                self.is_moving = False
+                
+                self.get_logger().info('Navigation canceled')
+                return result
+
+            # Calculate distance to target
+            distance_to_target = math.sqrt((target_x - self.current_x)**2 + (target_y - self.current_y)**2)
+            
+            # Update position gradually (simulating movement)
+            if distance_to_target > 0.1:  # If not close enough to target
+                # Move towards target
+                direction_x = (target_x - self.current_x) / distance_to_target
+                direction_y = (target_y - self.current_y) / distance_to_target
+                
+                # Move 1% of total distance per step
+                step_size = total_distance * 0.01
+                self.current_x += direction_x * step_size
+                self.current_y += direction_y * step_size
+                
+                # Publish velocity command
+                cmd_msg = Twist()
+                cmd_msg.linear.x = 0.5  # Move at 0.5 m/s
+                cmd_msg.angular.z = 0.0
+                self.cmd_pub.publish(cmd_msg)
+                self.is_moving = True
+            else:
+                # Reached target
+                cmd_msg = Twist()
+                cmd_msg.linear.x = 0.0
+                cmd_msg.angular.z = 0.0
+                self.cmd_pub.publish(cmd_msg)
+                self.is_moving = False
+                
+                break
+            
+            # Update and publish feedback
+            feedback_msg.current_x = self.current_x
+            feedback_msg.current_y = self.current_y
+            feedback_msg.distance_remaining = distance_to_target
+            feedback_msg.status = f"Moving to {goal_handle.request.location_name}"
+            
+            goal_handle.publish_feedback(feedback_msg)
+            
+            self.get_logger().debug(
+                f'Feedback - Pos: ({self.current_x:.2f}, {self.current_y:.2f}), '
+                f'Dist: {distance_to_target:.2f}')
+            
+            # Sleep to simulate real movement time
+            time.sleep(0.2)
+            step += 1
+        
+        # Check if we successfully reached the target
+        final_distance = math.sqrt((target_x - self.current_x)**2 + (target_y - self.current_y)**2)
+        
+        if final_distance <= 0.1:  # Within tolerance
+            goal_handle.succeed()
+            result.success = True
+            result.message = f"Successfully reached {goal_handle.request.location_name}"
+            result.error_code = 0
+            self.get_logger().info(f'Navigation successful: {result.message}')
+        else:
+            goal_handle.abort()
+            result.success = False
+            result.message = f"Failed to reach {goal_handle.request.location_name}, stopped early"
+            result.error_code = 2
+            self.get_logger().error(f'Navigation failed: {result.message}')
+        
+        return result
+
+def main(args=None):
+    rclpy.init(args=args)
+    action_server = ActionServerNode()
+    
+    try:
+        rclpy.spin(action_server)
+    except KeyboardInterrupt:
+        action_server.get_logger().info('Shutting down action server...')
+    finally:
+        action_server.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+## Exercise 5: System Monitor Node
+
+### Objective
+Create a system monitor that subscribes to topics, calls services, and uses actions to coordinate the complete system.
+
+### Implementation
+
+Create `communication_exercises/communication_exercises/system_monitor.py`:
+```python
+import rclpy
+from rclpy.node import Node
+from rclpy.action import ActionClient
+from std_srvs.srv import SetBool, Trigger
+from communication_exercises.msg import RobotStatus
+from sensor_msgs.msg import LaserScan
+from communication_exercises.action import MoveToLocation
+import random
+
+class SystemMonitor(Node):
+    def __init__(self):
+        super().__init__('system_monitor')
+        
+        # Topic subscriptions
+        self.status_sub = self.create_subscription(
+            RobotStatus, 'robot_status', self.status_callback, 10)
+        self.scan_sub = self.create_subscription(
+            LaserScan, 'scan', self.scan_callback, 10)
+        
+        # Service clients
+        self.emergency_client = self.create_client(SetBool, 'emergency_stop')
+        self.calibrate_client = self.create_client(Trigger, 'calibrate_sensors')
+        
+        # Action client
+        self.nav_client = ActionClient(self, MoveToLocation, 'move_to_location')
+        
+        # System state
+        self.current_battery = 100.0
+        self.safety_mode = False
+        self.obstacle_detected = False
+        
+        # Timer for system monitoring (1 Hz)
+        self.monitor_timer = self.create_timer(1.0, self.system_monitor_callback)
+        
+        # Timer for navigation tasks (5 seconds apart)
+        self.nav_timer = self.create_timer(5.0, self.schedule_navigation)
+        self.nav_counter = 0
+        
+        # Wait for services
+        while not self.emergency_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Waiting for emergency_stop service...')
+        
+        while not self.calibrate_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Waiting for calibrate_sensors service...')
+        
+        self.get_logger().info('System monitor started')
+
+    def status_callback(self, msg):
+        self.current_battery = msg.battery_level
+        
+        # Check for low battery
+        if self.current_battery < 20.0 and not self.safety_mode:
+            self.get_logger().warn(f'LOW BATTERY: {self.current_battery:.2f}%')
+            self.activate_safety_mode()
+    
+    def scan_callback(self, msg):
+        # Check for nearby obstacles
+        min_distance = min(msg.ranges) if msg.ranges else float('inf')
+        
+        if min_distance < 0.5 and not self.obstacle_detected:
+            self.obstacle_detected = True
+            self.get_logger().warn(f'OBSTACLE DETECTED: {min_distance:.2f}m')
+            
+            # Emergency stop if very close
+            if min_distance < 0.2:
+                self.activate_emergency_stop()
+    
+    def system_monitor_callback(self):
+        # Log system status
+        self.get_logger().info(
+            f'System Status - Battery: {self.current_battery:.2f}%, '
+            f'Safety: {self.safety_mode}, Obstacles: {self.obstacle_detected}')
+    
+    def schedule_navigation(self):
+        # Every 5 seconds, try a navigation task
+        self.nav_counter += 1
+        
+        if not self.safety_mode and not self.obstacle_detected:
+            # Generate random target coordinates
+            target_x = random.uniform(-5.0, 5.0)
+            target_y = random.uniform(-5.0, 5.0)
+            
+            self.get_logger().info(f'Scheduling navigation to ({target_x:.2f}, {target_y:.2f})')
+            self.send_navigation_goal(target_x, target_y, f"RandomGoal_{self.nav_counter}")
+        else:
+            self.get_logger().info('Navigation skipped - safety mode active or obstacle detected')
+    
+    def send_navigation_goal(self, x, y, location_name):
+        # Wait for action server
+        if not self.nav_client.wait_for_server(timeout_sec=1.0):
+            self.get_logger().error('Navigation action server not available')
+            return
+        
+        # Create and send goal
+        goal_msg = MoveToLocation.Goal()
+        goal_msg.target_x = x
+        goal_msg.target_y = y
+        goal_msg.location_name = location_name
+        
+        self.get_logger().info(f'Sending navigation goal to {location_name}')
+        
+        # Send goal asynchronously
+        future = self.nav_client.send_goal_async(
+            goal_msg,
+            feedback_callback=self.navigation_feedback_callback)
+        
+        future.add_done_callback(self.navigation_response_callback)
+    
+    def navigation_feedback_callback(self, feedback_msg):
+        self.get_logger().debug(
+            f'Navigation feedback: {feedback_msg.feedback.status} - '
+            f'Distance: {feedback_msg.feedback.distance_remaining:.2f}m')
+    
+    def navigation_response_callback(self, future):
+        goal_handle = future.result()
+        if not goal_handle.accepted:
+            self.get_logger().error('Navigation goal was rejected')
+            return
+        
+        self.get_logger().info('Navigation goal accepted, waiting for result...')
+        
+        # Get result future
+        result_future = goal_handle.get_result_async()
+        result_future.add_done_callback(self.navigation_result_callback)
+    
+    def navigation_result_callback(self, future):
+        result = future.result().result
+        self.get_logger().info(f'Navigation result: {result.message}')
+    
+    def activate_safety_mode(self):
+        self.safety_mode = True
+        self.get_logger().warn('Safety mode activated')
+    
+    def activate_emergency_stop(self):
+        self.get_logger().error('Activating emergency stop due to obstacle!')
+        
+        # Call emergency stop service
+        request = SetBool.Request()
+        request.data = True
+        
+        future = self.emergency_client.call_async(request)
+        future.add_done_callback(self.emergency_stop_callback)
+    
+    def emergency_stop_callback(self, future):
+        try:
+            response = future.result()
+            if response.success:
+                self.get_logger().info(f'Emergency stop executed: {response.message}')
+            else:
+                self.get_logger().error(f'Emergency stop failed: {response.message}')
+        except Exception as e:
+            self.get_logger().error(f'Service call failed: {e}')
+    
+    def calibrate_sensors(self):
+        self.get_logger().info('Calibrating sensors...')
+        
+        future = self.calibrate_client.call_async(Trigger.Request())
+        future.add_done_callback(self.calibrate_callback)
+    
+    def calibrate_callback(self, future):
+        try:
+            response = future.result()
+            if response.success:
+                self.get_logger().info(f'Sensor calibration successful: {response.message}')
+            else:
+                self.get_logger().error(f'Sensor calibration failed: {response.message}')
+        except Exception as e:
+            self.get_logger().error(f'Calibration service call failed: {e}')
+
+def main(args=None):
+    rclpy.init(args=args)
+    system_monitor = SystemMonitor()
+    
+    try:
+        rclpy.spin(system_monitor)
+    except KeyboardInterrupt:
+        system_monitor.get_logger().info('Shutting down system monitor...')
+    finally:
+        system_monitor.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+## Exercise 6: Launch File and System Integration
+
+### Objective
+Create a launch file to run the entire system and test the integration.
+
+Create `communication_exercises/launch/integrated_system_launch.py`:
+```python
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+def generate_launch_description():
+    return LaunchDescription([
+        # Sensor publisher node
+        Node(
+            package='communication_exercises',
+            executable='sensor_publisher',
+            name='sensor_publisher',
+            output='screen',
+        ),
+        # Service server node
+        Node(
+            package='communication_exercises',
+            executable='service_server',
+            name='service_server',
+            output='screen',
+        ),
+        # Action server node
+        Node(
+            package='communication_exercises',
+            executable='action_server',
+            name='action_server',
+            output='screen',
+        ),
+        # System monitor node
+        Node(
+            package='communication_exercises',
+            executable='system_monitor',
+            name='system_monitor',
+            output='screen',
+        ),
+    ])
+```
+
+## Exercise 7: Performance Testing and Comparison
+
+### Objective
+Create tests to compare the performance characteristics of each communication pattern.
+
+Create `communication_exercises/test/performance_test.py`:
+```python
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import QoSProfile
+from std_msgs.msg import String
+from std_srvs.srv import Trigger
+from communication_exercises.action import MoveToLocation
+from rclpy.action import ActionClient
+import time
+
+class PerformanceTester(Node):
+    def __init__(self):
+        super().__init__('performance_tester')
+        
+        # Topic publisher for performance testing
+        self.topic_publisher = self.create_publisher(String, 'perf_test_topic', 
+                                                   QoSProfile(depth=10))
+        
+        # Service client for performance testing
+        self.service_client = self.create_client(Trigger, 'perf_test_service')
+        
+        # Action client for performance testing
+        self.action_client = ActionClient(self, MoveToLocation, 'perf_test_action')
+        
+        # Test variables
+        self.test_count = 0
+        self.max_tests = 100
+        
+        # Timer for performance tests
+        self.topic_timer = self.create_timer(0.1, self.test_topic_performance)
+        self.service_timer = self.create_timer(1.0, self.test_service_performance)
+        self.action_timer = self.create_timer(2.0, self.test_action_performance)
+        
+        # Initialize test counters
+        self.topic_start_time = None
+        self.service_start_time = None
+        self.action_start_time = None
+        
+        self.get_logger().info('Performance tester initialized')
+
+    def test_topic_performance(self):
+        if self.test_count >= self.max_tests:
+            return
+            
+        # Publish a message and time it
+        self.topic_start_time = time.time()
+        
+        msg = String()
+        msg.data = f'perf_test_message_{self.test_count}'
+        self.topic_publisher.publish(msg)
+        
+        self.test_count += 1
+
+    def test_service_performance(self):
+        if not self.service_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().warn('Performance test service not available')
+            return
+            
+        if self.test_count >= self.max_tests:
+            return
+            
+        # Call service and time it
+        self.service_start_time = time.time()
+        
+        future = self.service_client.call_async(Trigger.Request())
+        future.add_done_callback(self.service_response_callback)
+
+    def service_response_callback(self, future):
+        try:
+            response = future.result()
+            end_time = time.time()
+            if self.service_start_time:
+                duration = end_time - self.service_start_time
+                self.get_logger().info(f'Service call duration: {duration:.4f}s')
+                self.service_start_time = None
+        except Exception as e:
+            self.get_logger().error(f'Service call failed: {e}')
+
+    def test_action_performance(self):
+        if not self.action_client.wait_for_server(timeout_sec=1.0):
+            self.get_logger().warn('Performance test action server not available')
+            return
+            
+        if self.test_count >= self.max_tests:
+            return
+            
+        # Send action goal and time it
+        self.action_start_time = time.time()
+        
+        goal_msg = MoveToLocation.Goal()
+        goal_msg.target_x = 1.0
+        goal_msg.target_y = 1.0
+        goal_msg.location_name = f'perf_test_{self.test_count}'
+        
+        # Send goal asynchronously
+        future = self.action_client.send_goal_async(goal_msg)
+        future.add_done_callback(self.action_response_callback)
+
+    def action_response_callback(self, future):
+        try:
+            goal_handle = future.result()
+            if not goal_handle.accepted:
+                self.get_logger().error('Performance test action goal was rejected')
+                return
+                
+            # Wait for result
+            result_future = goal_handle.get_result_async()
+            result_future.add_done_callback(self.action_result_callback)
+        except Exception as e:
+            self.get_logger().error(f'Action call failed: {e}')
+
+    def action_result_callback(self, future):
+        try:
+            result = future.result().result
+            end_time = time.time()
+            if self.action_start_time:
+                duration = end_time - self.action_start_time
+                self.get_logger().info(f'Action execution duration: {duration:.4f}s')
+                self.action_start_time = None
+        except Exception as e:
+            self.get_logger().error(f'Action result failed: {e}')
+
+def main(args=None):
+    rclpy.init(args=args)
+    performance_tester = PerformanceTester()
+    
+    try:
+        rclpy.spin(performance_tester)
+    except KeyboardInterrupt:
+        performance_tester.get_logger().info('Shutting down performance tester...')
+    finally:
+        performance_tester.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+## Exercise 8: Running the Complete System
+
+### Steps to Execute:
+
+1. **Build the package**:
+```bash
+cd ~/ros2_ws
+colcon build --packages-select communication_exercises
+source install/setup.bash
+```
+
+2. **Run the integrated system**:
+```bash
+ros2 launch communication_exercises integrated_system_launch.py
+```
+
+3. **Test individual components**:
+```bash
+# Test service calls
+ros2 service call /emergency_stop std_srvs/srv/SetBool "{data: true}"
+
+# Test action calls
+ros2 action send_goal /move_to_location communication_exercises/action/MoveToLocation "{target_x: 2.0, target_y: 2.0, location_name: 'test_location'}"
+
+# Monitor topics
+ros2 topic echo /robot_status
+```
+
+4. **Monitor system performance**:
+```bash
+# View all active topics
+ros2 topic list
+
+# Monitor message rates
+ros2 topic hz /scan
+
+# Check services
+ros2 service list
+
+# Check actions
+ros2 action list
+```
+
+## Summary
+
+This practical exercise demonstrated how to:
+
+1. **Design a complete system** using appropriate communication patterns:
+   - Topics for continuous sensor data and status updates
+   - Services for immediate configuration and control
+   - Actions for long-running navigation tasks
+
+2. **Implement each pattern correctly** with proper error handling and QoS settings
+
+3. **Integrate all patterns** in a coordinated system
+
+4. **Test and compare performance** characteristics of each pattern
+
+5. **Debug common issues** that arise when using multiple communication patterns together
+
+## Additional Challenges
+
+1. **Extend the system**: Add more sensor types (camera, GPS) with appropriate communication patterns
+2. **Add security**: Implement authentication for sensitive services
+3. **Create a dashboard**: Build a simple GUI to monitor and control the system
+4. **Optimize performance**: Profile and optimize the communication patterns for your specific use case
+5. **Add persistence**: Store and retrieve robot configurations between sessions
+
+This completes the submodules for Week 3 of Module 1 on Services and Actions in ROS 2.

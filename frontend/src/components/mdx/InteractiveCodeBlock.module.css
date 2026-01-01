@@ -1,0 +1,132 @@
+.interactiveCodeBlock {
+  margin: 1.5rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.codeHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #2d3748;
+  padding: 0.5rem 1rem;
+  color: white;
+}
+
+.codeTitle {
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.copyButton {
+  background-color: #4a5568;
+  color: white;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.copyButton:hover {
+  background-color: #718096;
+}
+
+.codeBlock {
+  background-color: #1a202c;
+  color: #e2e8f0;
+  padding: 1rem;
+  overflow-x: auto;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.codeBlock :global(.token.comment) {
+  color: #a0aec0;
+}
+
+.codeBlock :global(.token.keyword) {
+  color: #63b3ed;
+}
+
+.codeBlock :global(.token.function) {
+  color: #68d391;
+}
+
+.codeBlock :global(.token.string) {
+  color: #feb2b2;
+}
+
+.codeBlock :global(.token.number) {
+  color: #f6e05e;
+}
+
+.codeBlock :global(.token.operator) {
+  color: #e9d8fd;
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+  .interactiveCodeBlock {
+    margin: 1rem 0;
+  }
+
+  .codeHeader {
+    padding: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .codeTitle {
+    font-size: 0.75rem;
+  }
+
+  .copyButton {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .codeBlock {
+    padding: 0.75rem;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .codeHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .copyButton {
+    align-self: flex-end;
+  }
+
+  .codeBlock {
+    padding: 0.5rem;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 375px) {
+  .interactiveCodeBlock {
+    margin: 0.75rem 0;
+  }
+
+  .codeTitle {
+    font-size: 0.7rem;
+  }
+
+  .copyButton {
+    font-size: 0.6rem;
+    padding: 0.15rem 0.3rem;
+  }
+
+  .codeBlock {
+    padding: 0.4rem;
+    font-size: 0.65rem;
+  }
+}

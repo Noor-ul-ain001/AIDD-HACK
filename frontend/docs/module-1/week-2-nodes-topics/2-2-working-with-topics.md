@@ -1,0 +1,334 @@
+---
+sidebar_position: 2
+difficulty: intermediate
+---
+
+# 2.2: Working with ROS 2 Topics
+
+## Overview
+
+This submodule explores ROS 2 topics in detail, which are the primary mechanism for asynchronous communication between nodes using a publish-subscribe pattern.
+
+## Learning Objectives
+
+By the end of this submodule, you will:
+- Understand the publish-subscribe communication pattern
+- Create publishers and subscribers in Python and C++
+- Work with different message types and custom messages
+- Configure Quality of Service (QoS) policies for topics
+- Debug and monitor topics using ROS 2 tools
+
+## Topic Communication Pattern
+
+ROS 2 uses a **publish-subscribe** model for asynchronous communication. In this pattern:
+
+- **Publishers** send messages to topics
+- **Subscribers** receive messages from topics
+- Multiple publishers and subscribers can use the same topic
+- Communication is decoupled in time and space
+
+### Basic Topic Flow
+
+```
+Publisher Node → Topic → Subscriber Node
+     ↓                    ↑
+Publisher Node →--------→ Subscriber Node
+```
+
+## Creating Publishers
+
+### Python Publisher
+
+```python
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+class MinimalPublisher(Node):
+    def __init__(self):
+        super().__init__('minimal_publisher')
+        self.publisher_ = self.create_publisher(String, 'topic', 10)
+        timer_period = 0.5  # seconds
+        self.timer = self.create_timer(timer_period, self.timer_callback)
+        self.i = 0
+
+    def timer_callback(self):
+        msg = String()
+        msg.data = f'Hello World: {self.i}'
+        self.publisher_.publish(msg)
+        self.get_logger().info(f'Publishing: "{msg.data}"')
+        self.i += 1
+
+def main(args=None):
+    rclpy.init(args=args)
+    minimal_publisher = MinimalPublisher()
+    rclpy.spin(minimal_publisher)
+    minimal_publisher.destroy_node()
+    rclpy.shutdown()
+```
+
+### C++ Publisher
+
+```cpp
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/string.hpp>
+
+using namespace std::chrono_literals;
+
+class MinimalPublisher : public rclcpp::Node
+{
+public:
+    MinimalPublisher() : Node("minimal_publisher")
+    {
+        publisher_ = this->create_publisher<std_msgs::msg::String>("topic", 10);
+        timer_ = this->create_wall_timer(
+            500ms, std::bind(&MinimalPublisher::timer_callback, this));
+        count_ = 0;
+    }
+
+private:
+    void timer_callback()
+    {
+        auto message = std_msgs::msg::String();
+        message.data = "Hello World: " + std::to_string(count_++);
+        RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
+        publisher_->publish(message);
+    }
+    rclcpp::TimerBase::SharedPtr timer_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
+    size_t count_;
+};
+```
+
+## Creating Subscribers
+
+### Python Subscriber
+
+```python
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+class MinimalSubscriber(Node):
+    def __init__(self):
+        super().__init__('minimal_subscriber')
+        self.subscription = self.create_subscription(
+            String,
+            'topic',
+            self.listener_callback,
+            10)
+        self.subscription  # prevent unused variable warning
+
+    def listener_callback(self, msg):
+        self.get_logger().info(f'I heard: "{msg.data}"')
+
+def main(args=None):
+    rclpy.init(args=args)
+    minimal_subscriber = MinimalSubscriber()
+    rclpy.spin(minimal_subscriber)
+    minimal_subscriber.destroy_node()
+    rclpy.shutdown()
+```
+
+### C++ Subscriber
+
+```cpp
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/string.hpp>
+
+class MinimalSubscriber : public rclpp::Node
+{
+public:
+    MinimalSubscriber() : Node("minimal_subscriber")
+    {
+        subscription_ = this->create_subscription<std_msgs::msg::String>(
+            "topic", 10,
+            std::bind(&MinimalSubscriber::topic_callback, this, std::placeholders::_1));
+    }
+
+private:
+    void topic_callback(const std_msgs::msg::String::SharedPtr msg) const
+    {
+        RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg->data.c_str());
+    }
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_;
+};
+```
+
+## Quality of Service (QoS) Settings
+
+QoS policies control how messages are delivered between publishers and subscribers:
+
+```python
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
+
+# Create a custom QoS profile
+qos_profile = QoSProfile(
+    depth=10,  # Number of messages to buffer
+    reliability=ReliabilityPolicy.RELIABLE,  # or BEST_EFFORT
+    history=HistoryPolicy.KEEP_LAST,  # or KEEP_ALL
+    durability=DurabilityPolicy.VOLATILE  # or TRANSIENT_LOCAL
+)
+
+# Use the custom QoS profile
+publisher = node.create_publisher(String, 'topic', qos_profile)
+subscription = node.create_subscription(String, 'topic', callback, qos_profile)
+```
+
+### Common QoS Settings
+
+- **Reliability**: `RELIABLE` ensures all messages are delivered; `BEST_EFFORT` doesn't guarantee delivery
+- **History**: `KEEP_LAST` keeps the most recent N messages; `KEEP_ALL` keeps all messages
+- **Depth**: Number of messages to store in the history
+- **Durability**: `VOLATILE` for temporary messages; `TRANSIENT_LOCAL` for persistent messages
+
+## Custom Message Types
+
+### Creating Custom Messages
+
+1. Create a msg directory in your package
+2. Define your message in a `.msg` file:
+```
+# MyCustomMessage.msg
+string name
+int32 id
+float64 value
+bool active
+```
+
+3. Update your package.xml to export the message:
+```xml
+<build_depend>rosidl_default_generators</build_depend>
+<exec_depend>rosidl_default_runtime</exec_depend>
+<member_of_group>rosidl_interface_packages</member_of_group>
+```
+
+4. Update CMakeLists.txt:
+```cmake
+find_package(rosidl_default_generators REQUIRED)
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/MyCustomMessage.msg"
+)
+```
+
+### Using Custom Messages
+
+```python
+from my_package_msgs.msg import MyCustomMessage
+
+# Publisher with custom message
+publisher = node.create_publisher(MyCustomMessage, 'custom_topic', 10)
+
+msg = MyCustomMessage()
+msg.name = 'Robot1'
+msg.id = 1
+msg.value = 3.14
+msg.active = True
+
+publisher.publish(msg)
+
+# Subscriber with custom message
+subscription = node.create_subscription(
+    MyCustomMessage,
+    'custom_topic',
+    callback,
+    10
+)
+```
+
+## Topic Tools and Monitoring
+
+### Command-Line Tools
+
+```bash
+# List all topics
+ros2 topic list
+
+# Get information about a topic
+ros2 topic info /topic_name
+
+# Echo messages from a topic
+ros2 topic echo /topic_name
+
+# Publish to a topic from command line
+ros2 topic pub /topic_name std_msgs/msg/String "data: 'Hello'"
+
+# Print the type of a topic
+ros2 topic type /topic_name
+
+# Show bandwidth usage of topics
+ros2 topic bw
+
+# Show Hz rate of a topic
+ros2 topic hz /topic_name
+
+# Show latency of a topic
+ros2 topic delay /topic_name
+```
+
+### Advanced Topic Inspection
+
+```bash
+# Echo with field filtering
+ros2 topic echo /topic_name --field data
+
+# Echo with limiting messages
+ros2 topic echo /topic_name --field data --count 5
+
+# Echo with specific format
+ros2 topic echo /topic_name --field data --field_filter "data"
+```
+
+## Topic Debugging
+
+### Common Issues and Solutions
+
+1. **No messages being received**
+   - Check if publisher and subscriber are on the same topic
+   - Verify QoS compatibility between publisher and subscriber
+   - Ensure nodes are running and connected
+
+2. **Old messages not being received**
+   - Check QoS history policy
+   - Verify depth setting is adequate
+
+3. **Message drops**
+   - Check network connectivity
+   - Verify QoS reliability settings
+   - Monitor system resources
+
+### Debugging Code Example
+
+```python
+def debug_topic_info(node):
+    # Get list of topics and their types
+    topic_names_and_types = node.get_topic_names_and_types()
+    
+    for name, types in topic_names_and_types:
+        print(f"Topic: {name}, Types: {types}")
+        
+        # Get specific info about the topic
+        try:
+            info = node.get_publishers_info_by_topic(name)
+            print(f"  Publishers: {len(info)}")
+            for pub in info:
+                print(f"    - {pub.node_name}, QoS: {pub.qos_profile}")
+                
+            info = node.get_subscriptions_info_by_topic(name)
+            print(f"  Subscribers: {len(info)}")
+        except Exception as e:
+            print(f"  Error getting info: {e}")
+```
+
+## Best Practices
+
+1. **Topic Naming**: Use descriptive, consistent names (e.g., `/robot_1/sensor_data` instead of `data`)
+2. **QoS Settings**: Choose appropriate QoS settings based on your application requirements
+3. **Message Design**: Design message types to minimize bandwidth while providing necessary information
+4. **Buffer Sizes**: Set appropriate buffer sizes based on message frequency and processing requirements
+5. **Error Handling**: Implement proper error handling for communication issues
+
+## Summary
+
+This submodule covered working with ROS 2 topics including publishers, subscribers, QoS policies, custom messages, and debugging techniques. In the next submodule, we'll explore more advanced communication patterns in ROS 2.

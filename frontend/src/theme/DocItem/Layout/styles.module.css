@@ -1,0 +1,149 @@
+/* DocItem Layout Styles */
+
+.docItemWrapper {
+  position: relative;
+}
+
+.difficultyContainer {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.contentHidden {
+  padding: 3rem 2rem;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hiddenMessage {
+  max-width: 500px;
+  text-align: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+  border-radius: 16px;
+  border: 2px dashed rgba(102, 126, 234, 0.3);
+}
+
+.icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.hiddenMessage h2 {
+  margin: 0 0 1rem 0;
+  color: #1f2937;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.hiddenMessage p {
+  margin: 0 0 1rem 0;
+  color: #6b7280;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.hiddenMessage p:last-child {
+  margin-bottom: 0;
+}
+
+.helpText {
+  font-size: 0.9375rem;
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  margin-top: 1.5rem !important;
+}
+
+.helpText strong {
+  color: #667eea;
+  font-weight: 600;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .difficultyContainer {
+    border-bottom-color: #374151;
+  }
+
+  .hiddenMessage {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border-color: rgba(102, 126, 234, 0.4);
+  }
+
+  .hiddenMessage h2 {
+    color: #f3f4f6;
+  }
+
+  .hiddenMessage p {
+    color: #9ca3af;
+  }
+
+  .helpText {
+    background: #1f2937;
+    border-color: #374151;
+    color: #d1d5db;
+  }
+
+  .helpText strong {
+    color: #a78bfa;
+  }
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .difficultyContainer {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .contentHidden {
+    padding: 2rem 1rem;
+  }
+
+  .hiddenMessage {
+    padding: 1.5rem;
+  }
+
+  .icon {
+    font-size: 2.5rem;
+  }
+
+  .hiddenMessage h2 {
+    font-size: 1.25rem;
+  }
+
+  .hiddenMessage p {
+    font-size: 0.9375rem;
+  }
+}
+
+/* Progress Button Container */
+.progressContainer {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: center;
+}
+
+@media (prefers-color-scheme: dark) {
+  .progressContainer {
+    border-top-color: #374151;
+  }
+}
+
+@media (max-width: 768px) {
+  .progressContainer {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+  }
+}

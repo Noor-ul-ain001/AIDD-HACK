@@ -1,0 +1,318 @@
+---
+sidebar_position: 4
+difficulty: beginner
+---
+
+# 1.4: Practical Exercises - ROS 2 Fundamentals
+
+## Overview
+
+This submodule provides hands-on exercises to reinforce your understanding of ROS 2 fundamentals and gain practical experience with the system.
+
+## Learning Objectives
+
+By the end of this submodule, you will:
+- Create your first ROS 2 package
+- Implement a publisher and subscriber
+- Use ROS 2 command-line tools
+- Build and run your custom nodes
+
+## Exercise 1: Creating Your First Package
+
+### Objective
+Create a new ROS 2 package for your exercises.
+
+### Steps
+1. Navigate to your workspace:
+```bash
+cd ~/ros2_ws/src
+```
+
+2. Create a new package:
+```bash
+ros2 pkg create --build-type ament_python my_robot_tutorials
+```
+
+3. Change into the package directory:
+```bash
+cd my_robot_tutorials
+```
+
+4. The package structure will look like:
+```
+my_robot_tutorials/
+├── my_robot_tutorials/
+├── test/
+├── package.xml
+├── setup.cfg
+├── setup.py
+```
+
+## Exercise 2: Publisher Node Implementation
+
+### Objective
+Implement a simple publisher that publishes custom messages.
+
+### Steps
+1. Create a Python script in `my_robot_tutorials/my_robot_tutorials/`:
+```python
+# publisher_member_function.py
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+
+class MinimalPublisher(Node):
+
+    def __init__(self):
+        super().__init__('minimal_publisher')
+        self.publisher_ = self.create_publisher(String, 'topic', 10)
+        timer_period = 0.5  # seconds
+        self.timer = self.create_timer(timer_period, self.timer_callback)
+        self.i = 0
+
+    def timer_callback(self):
+        msg = String()
+        msg.data = 'Hello World: %d' % self.i
+        self.publisher_.publish(msg)
+        self.get_logger().info('Publishing: "%s"' % msg.data)
+        self.i += 1
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    minimal_publisher = MinimalPublisher()
+
+    rclpy.spin(minimal_publisher)
+
+    # Destroy the node explicitly
+    minimal_publisher.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+## Exercise 3: Subscriber Node Implementation
+
+### Objective
+Implement a subscriber that listens to the publisher's messages.
+
+### Steps
+1. Create a subscriber script in `my_robot_tutorials/my_robot_tutorials/`:
+```python
+# subscriber_member_function.py
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+
+class MinimalSubscriber(Node):
+
+    def __init__(self):
+        super().__init__('minimal_subscriber')
+        self.subscription = self.create_subscription(
+            String,
+            'topic',
+            self.listener_callback,
+            10)
+        self.subscription  # prevent unused variable warning
+
+    def listener_callback(self, msg):
+        self.get_logger().info('I heard: "%s"' % msg.data)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    minimal_subscriber = MinimalSubscriber()
+
+    rclpy.spin(minimal_subscriber)
+
+    # Destroy the node explicitly
+    minimal_subscriber.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+2. Add executables to the setup.py:
+Add the following to the `setup.py` file in the `entry_points` section:
+```python
+'console_scripts': [
+    'talker = my_robot_tutorials.publisher_member_function:main',
+    'listener = my_robot_tutorials.subscriber_member_function:main',
+],
+```
+
+## Exercise 4: Building and Running
+
+### Objective
+Build your package and run the publisher/subscriber nodes.
+
+### Steps
+1. Build your package:
+```bash
+cd ~/ros2_ws
+colcon build --packages-select my_robot_tutorials
+```
+
+2. Source the workspace:
+```bash
+source install/setup.bash
+```
+
+3. Run the publisher in one terminal:
+```bash
+ros2 run my_robot_tutorials talker
+```
+
+4. Run the subscriber in another terminal:
+```bash
+ros2 run my_robot_tutorials listener
+```
+
+## Exercise 5: Using ROS 2 Command-Line Tools
+
+### Objective
+Explore ROS 2 command-line tools to inspect your running nodes.
+
+### Steps
+1. **List active nodes**:
+```bash
+ros2 node list
+```
+
+2. **Get information about a specific node**:
+```bash
+ros2 node info /minimal_publisher
+ros2 node info /minimal_subscriber
+```
+
+3. **List active topics**:
+```bash
+ros2 topic list
+```
+
+4. **Echo messages on a topic** (in a separate terminal):
+```bash
+ros2 topic echo /topic std_msgs/msg/String
+```
+
+5. **Check topic info**:
+```bash
+ros2 topic info /topic
+```
+
+6. **Publish directly from command line**:
+```bash
+ros2 topic pub /topic std_msgs/msg/String "data: 'Hello from command line'"
+```
+
+## Exercise 6: Creating a Service
+
+### Objective
+Implement a simple service server and client.
+
+1. Create a service server file (`my_robot_tutorials/my_robot_tutorials/service_server.py`):
+```python
+import rclpy
+from rclpy.node import Node
+from example_interfaces.srv import AddTwoInts
+
+
+class MinimalService(Node):
+
+    def __init__(self):
+        super().__init__('minimal_service')
+        self.srv = self.create_service(AddTwoInts, 'add_two_ints', self.add_two_ints_callback)
+
+    def add_two_ints_callback(self, request, response):
+        response.sum = request.a + request.b
+        self.get_logger().info('Incoming request\na: %d b: %d' % (request.a, request.b))
+        return response
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    minimal_service = MinimalService()
+    rclpy.spin(minimal_service)
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+2. Create a service client file (`my_robot_tutorials/my_robot_tutorials/service_client.py`):
+```python
+import sys
+import rclpy
+from rclpy.node import Node
+from example_interfaces.srv import AddTwoInts
+
+
+class MinimalClient(Node):
+
+    def __init__(self):
+        super().__init__('minimal_client')
+        self.cli = self.create_client(AddTwoInts, 'add_two_ints')
+        while not self.cli.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+        self.req = AddTwoInts.Request()
+
+    def send_request(self, a, b):
+        self.req.a = a
+        self.req.b = b
+        future = self.cli.call_async(self.req)
+        return future
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    minimal_client = MinimalClient()
+    future = minimal_client.send_request(int(sys.argv[1]), int(sys.argv[2]))
+    rclpy.spin_until_future_complete(minimal_client, future)
+    response = future.result()
+    minimal_client.get_logger().info(
+        'Result of add_two_ints: for %d + %d = %d' % 
+        (int(sys.argv[1]), int(sys.argv[2]), response.sum))
+    minimal_client.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+3. Build and run:
+```bash
+cd ~/ros2_ws
+colcon build --packages-select my_robot_tutorials
+source install/setup.bash
+# Run the server in one terminal:
+ros2 run my_robot_tutorials minimal_service
+# From another terminal, run the client:
+ros2 run my_robot_tutorials minimal_client 1 2
+```
+
+## Summary
+
+These practical exercises have given you hands-on experience with core ROS 2 concepts:
+- Creating packages
+- Implementing publishers and subscribers
+- Using command-line tools
+- Creating services
+
+## Additional Challenges
+
+1. Create a parameter server node that publishes parameters
+2. Implement an action server for a more complex task
+3. Create a launch file to run multiple nodes at once
+4. Use RViz to visualize your nodes' data
+
+This concludes the submodules for Week 1 of Module 1 on ROS 2 Fundamentals.

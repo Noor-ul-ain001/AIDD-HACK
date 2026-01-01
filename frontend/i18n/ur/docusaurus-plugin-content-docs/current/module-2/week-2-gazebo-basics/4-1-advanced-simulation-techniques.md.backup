@@ -1,0 +1,342 @@
+---
+sidebar_position: 3
+difficulty: intermediate
+---
+
+# Week 4: Advanced Simulation
+
+## Overview
+
+This week explores advanced simulation techniques that enable complex robotic scenarios, including multi-robot simulation, sensor fusion, and realistic physics modeling.
+
+## Learning Objectives
+
+By the end of this week, you will:
+- Implement multi-robot simulation scenarios
+- Apply advanced physics and dynamics modeling
+- Integrate sensor fusion in simulated environments
+- Optimize simulation performance and realism
+
+## Multi-Robot Simulation
+
+### Coordinating Multiple Robots
+
+Simulating multiple robots requires careful management of namespaces, TF trees, and communication channels to avoid conflicts:
+
+```python
+# Example: Multi-robot controller
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Twist
+
+class MultiRobotController(Node):
+    def __init__(self):
+        super().__init__('multi_robot_controller')
+        
+        # Robot configurations
+        self.robots = ['robot1', 'robot2', 'robot3']
+        
+        # Create publishers for each robot
+        self.cmd_vel_pubs = {}
+        for robot in self.robots:
+            topic_name = f'/{robot}/cmd_vel'
+            self.cmd_vel_pubs[robot] = self.create_publisher(
+                Twist,
+                topic_name,
+                10
+            )
+    
+    def send_command(self, robot_name, linear_x, angular_z):
+        msg = Twist()
+        msg.linear.x = linear_x
+        msg.angular.z = angular_z
+        self.cmd_vel_pubs[robot_name].publish(msg)
+```
+
+### Launch File for Multi-Robot Simulation
+
+```xml
+<launch>
+  <!-- Load robot descriptions -->
+  <group>
+    <push-ros-namespace namespace="robot1"/>
+    <include file="$(find-pkg-share my_robot_description)/launch/spawn.launch.py">
+      <arg name="robot_name" value="robot1"/>
+      <arg name="x" value="0.0"/>
+      <arg name="y" value="0.0"/>
+    </include>
+  </group>
+  
+  <group>
+    <push-ros-namespace namespace="robot2"/>
+    <include file="$(find-pkg-share my_robot_description)/launch/spawn.launch.py">
+      <arg name="robot_name" value="robot2"/>
+      <arg name="x" value="2.0"/>
+      <arg name="y" value="0.0"/>
+    </include>
+  </group>
+  
+  <!-- Add more robots as needed -->
+</launch>
+```
+
+### TF Tree Management
+
+Multi-robot systems require careful management of transformation frames:
+
+```
+map
+├── robot1/odom
+│   └── robot1/base_link
+│       ├── robot1/laser
+│       └── robot1/camera
+└── robot2/odom
+    └── robot2/base_link
+        ├── robot2/laser
+        └── robot2/camera
+```
+
+## Advanced Physics Modeling
+
+### Realistic Physics Properties
+
+Fine-tune physics properties to match real-world behavior:
+
+```xml
+<!-- In URDF/SDF for realistic physics -->
+<link name="wheel_link">
+  <inertial>
+    <mass value="0.2"/>
+    <inertia ixx="0.001" ixy="0.0" ixz="0.0" 
+             iyy="0.001" iyz="0.0" izz="0.002"/>
+  </inertial>
+  
+  <collision>
+    <!-- Use realistic collision geometry -->
+    <geometry>
+      <cylinder radius="0.05" length="0.04"/>
+    </geometry>
+  </collision>
+  
+  <gazebo>
+    <material>Gazebo/Blue</material>
+    <mu1>100.0</mu1>  <!-- Friction coefficient -->
+    <mu2>100.0</mu2>  <!-- Secondary friction -->
+    <kp>10000000.0</kp>  <!-- Contact stiffness -->
+    <kd>100000.0</kd>    <!-- Contact damping -->
+    <max_vel>100.0</max_vel>
+    <min_depth>0.001</min_depth>
+  </gazebo>
+</link>
+```
+
+### Custom Physics Plugins
+
+Create custom physics models for specific behaviors:
+
+```cpp
+#include <gazebo/gazebo.hh>
+#include <gazebo/physics/physics.hh>
+#include <gazebo/common/common.hh>
+
+class CustomPhysicsPlugin : public gazebo::WorldPlugin
+{
+public:
+    void Load(gazebo::physics::WorldPtr _world, sdf::ElementPtr _sdf)
+    {
+        this->world = _world;
+        
+        // Connect to pre-update event
+        this->updateConnection = gazebo::event::Events::ConnectWorldUpdateBegin(
+            std::bind(&CustomPhysicsPlugin::OnUpdate, this));
+    }
+
+private:
+    void OnUpdate()
+    {
+        // Implement custom physics behavior
+    }
+
+    gazebo::physics::WorldPtr world;
+    gazebo::event::ConnectionPtr updateConnection;
+};
+
+GZ_REGISTER_WORLD_PLUGIN(CustomPhysicsPlugin)
+```
+
+## Sensor Fusion in Simulation
+
+### Combining Multiple Sensor Types
+
+Simulate realistic sensor fusion scenarios:
+
+```python
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import LaserScan, Imu, NavSatFix
+from geometry_msgs.msg import PoseWithCovarianceStamped
+from tf2_ros import TransformListener
+from rclpy.qos import QoSProfile, ReliabilityPolicy
+
+class SensorFusionNode(Node):
+    def __init__(self):
+        super().__init__('sensor_fusion_node')
+        
+        # Set up QoS profiles for reliable sensor data
+        qos_profile = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
+        
+        # Subscribe to multiple sensor types
+        self.lidar_sub = self.create_subscription(
+            LaserScan, '/scan', self.lidar_callback, qos_profile)
+        
+        self.imu_sub = self.create_subscription(
+            Imu, '/imu/data', self.imu_callback, qos_profile)
+        
+        self.gps_sub = self.create_subscription(
+            NavSatFix, '/gps/fix', self.gps_callback, qos_profile)
+        
+        # Publisher for fused pose estimate
+        self.pose_pub = self.create_publisher(
+            PoseWithCovarianceStamped, '/fused_pose', qos_profile)
+        
+        # Initialize sensor fusion algorithm
+        self.initialize_fusion_algorithm()
+    
+    def lidar_callback(self, msg):
+        # Process LIDAR data for localization
+        self.process_lidar_for_localization(msg)
+    
+    def imu_callback(self, msg):
+        # Process IMU data for orientation
+        self.process_imu_for_orientation(msg)
+    
+    def gps_callback(self, msg):
+        # Process GPS data for global position
+        self.process_gps_for_position(msg)
+```
+
+## Simulation Performance Optimization
+
+### Efficient Simulation Techniques
+
+1. **Level of Detail (LOD)**: Use simplified models for distant objects
+2. **Update Rates**: Adjust physics and sensor update rates based on requirements
+3. **Threading**: Use multiple threads for different simulation components
+4. **Caching**: Cache expensive computations where possible
+
+### Optimized Gazebo Configuration
+
+```bash
+# Gazebo server launch with optimizations
+gzserver --verbose \
+  --physics=ode \
+  --play-speed=1.0 \
+  worlds/my_world.world
+```
+
+```xml
+<!-- Physics engine optimization -->
+<physics name="default_physics" type="ode">
+  <max_step_size>0.001</max_step_size>
+  <real_time_factor>1.0</real_time_factor>
+  <real_time_update_rate>1000.0</real_time_update_rate>
+  <ode>
+    <solver>
+      <type>quick</type>
+      <iters>10</iters>
+      <sor>1.3</sor>
+    </solver>
+    <constraints>
+      <cfm>0.0</cfm>
+      <erp>0.2</erp>
+      <contact_max_correcting_vel>100.0</contact_max_correcting_vel>
+      <contact_surface_layer>0.001</contact_surface_layer>
+    </constraints>
+  </ode>
+</physics>
+```
+
+## Realistic Environment Modeling
+
+### Complex World Scenarios
+
+Create simulation environments that challenge robot algorithms:
+
+```xml
+<!-- Complex world with dynamic elements -->
+<world name="complex_factory">
+  <!-- Static elements -->
+  <include>
+    <uri>model://large_industrial_building</uri>
+  </include>
+  
+  <!-- Dynamic elements -->
+  <actor name="pedestrian_1">
+    <pose>5 0 0.05 0 0 0</pose>
+    <skin>
+      <filename>walk.dae</filename>
+      <scale>1.0</scale>
+    </skin>
+    <animation name="walking">
+      <filename>walk.dae</filename>
+      <scale>1.0</scale>
+      <interpolate_x>true</interpolate_x>
+    </animation>
+    <waypoints>
+      <waypoint>
+        <time>0</time>
+        <pose>5 0 0.05 0 0 0</pose>
+      </waypoint>
+      <waypoint>
+        <time>10</time>
+        <pose>5 10 0.05 0 0 0</pose>
+      </waypoint>
+      <!-- Additional waypoints -->
+    </waypoints>
+  </actor>
+</world>
+```
+
+### Weather and Environmental Effects
+
+Simulate environmental conditions that affect sensors:
+
+```xml
+<!-- Lighting effects -->
+<light name="sun" type="directional">
+  <cast_shadows>true</cast_shadows>
+  <pose>0 0 10 0 0 0</pose>
+  <diffuse>0.8 0.8 0.8 1</diffuse>
+  <specular>0.2 0.2 0.2 1</specular>
+  <attenuation>
+    <range>1000</range>
+    <constant>0.9</constant>
+    <linear>0.01</linear>
+    <quadratic>0.001</quadratic>
+  </attenuation>
+  <direction>-0.3 0.3 -1</direction>
+</light>
+
+<!-- Atmospheric effects -->
+<scene>
+  <fog type="linear">
+    <color>0.8 0.8 0.8</color>
+    <density>0.1</density>
+    <start>5</start>
+    <end>100</end>
+  </fog>
+</scene>
+```
+
+## Practical Exercise
+
+This week's exercise involves creating an advanced multi-robot simulation:
+
+1. Set up a complex environment with obstacles and dynamic elements
+2. Implement sensor fusion for multiple robots
+3. Optimize simulation performance for real-time execution
+4. Validate robot coordination in the simulation
+
+## Summary
+
+This week explored advanced simulation techniques that enable complex robotic scenarios. You've learned about multi-robot simulation, physics modeling, sensor fusion, and performance optimization. This concludes Module 2 on Robot Simulation.
